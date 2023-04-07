@@ -26,14 +26,16 @@
 
 
 #define  Msg_str "Hi server!"
-int socket_init(char *servip,int port)
+
+
+int socket_init(char *servip,int port);
 
 void print_usage(char *proname)
 {
         printf("%s usage :[servip] [port]\n",proname );
         printf("-i(--ipaddr): sepcify Server IP address\n");
         printf("-p(--port): sepcify Server port\n");
-		printf ("-t(--time): set data reporting time\n");
+		printf("-t(--time): set data reporting time\n");
         printf("-h(--help): print this help information.\n");
 
         return ;
@@ -45,12 +47,11 @@ int main(int argc,char **argv)
         char                  msg_str[1024];
         int                   sockfd = -1;
         int                   rv = -1;
-        struct  sockaddr_in   servaddr;
         char                 *servip = NULL;
         int                   port = 0;
         char                  buf[1024];
         int                   ch;
-		int                   time;   //设置上报数据时间
+		char                 *time;   //设置上报数据时间
         struct option         opts[] = {
                 {"ipaddr",required_argument,NULL,'i'},
                 {"port",required_argument,NULL,'p'},
@@ -58,11 +59,6 @@ int main(int argc,char **argv)
                 {"help",no_argument,NULL,'h'},\
                 {NULL,0,NULL,0}
         };
-        int                get_back = -1;  //定义getaddrinfo函数返回值
-        struct addrinfo    hints;    //定义一个结构体
-        struct addrinfo    *res;     //定义函数返回的结构体链表的指针
-        struct addrinfo    *readIP;    //定义一个遍历链表的指针
-        struct sockaddr_in *addr;
 
         while ((ch=getopt_long(argc, argv, "i:p:t:h",opts,NULL)) != -1)
         {
@@ -88,49 +84,7 @@ int main(int argc,char **argv)
                 return 0;
         }
 
-
-        sockfd=socket(AF_INET, SOCK_STREAM, 0);
-        if(sockfd < 0)
-        {
-                printf("Create socket failure : %s\n",strerror(errno));
-                return -1;
-        }
-        printf("Create socket[%d] successfully!\n",sockfd);
-       
-        //DNS
-        memset(&hints, 0, sizeof(hints));   //将存放信息的结构体清零
-        hints.ai_flags = AI_PASSIVE;      //写入期望返回的结构体的相关信息
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_family = AF_INET;      
-        hints.ai_protocol = 0; 
-        get_back = getaddrinfo(servip, NULL, &hints, &res); // 调用函数
-        if(get_back != 0)   //如果函数调用失败
-        {
-                 printf("DNS faliure:%s\n",strerror(errno));
-                 return -1;
-        }
-        for (readIP = res; readIP != NULL; readIP = readIP->ai_next)   //遍历链表每一个节点，查询关于存储返回的IP的信息
-        {
-                  addr = (struct sockaddr_in *)readIP->ai_addr;  //将返回的IP信息存储在addr指向的结构体中
-//                  servip = inet_ntoa(addr->sin_addr);
-                  printf("IP address: %s\n", inet_ntoa(addr->sin_addr));  //inet_ntoa函数将字符串类型IP地址转化为点分十进制
-        }
-        servip = inet_ntoa(addr->sin_addr);
-        freeaddrinfo(res);  //释放getaddrinfo函数调用动态获取的空间
-
-        memset(&servaddr, 0, sizeof(servaddr));
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(port);
-
-        rv=connect(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
-        if(rv < 0)
-        {
-                printf("Connect Server[%s:%d] failure : %s\n",
-                                servip,  port, strerror(errno));
-                return -2;
-
-        }
-        printf("Connect to Server [%s:%d] successfully!\n", servip,  port);
+        sockfd=socket_init(servip,port);
 
         rv=write(sockfd, Msg_str, strlen(Msg_str));
         if(rv < 0)
@@ -187,11 +141,14 @@ int main(int argc,char **argv)
 
 int socket_init(char *servip,int port)
 {
-		int                get_back = -1;  //定义getaddrinfo函数返回值
-		struct addrinfo    hints;    //定义一个结构体
-		struct addrinfo    *res;     //定义函数返回的结构体链表的指针
-		struct addrinfo    *readIP;    //定义一个遍历链表的指针
- 		struct sockaddr_in *addr;
+        struct  sockaddr_in  servaddr;
+ 		struct  sockaddr_in *addr;
+        int                  sockfd = -1;
+		int                  get_back = -1;  //定义getaddrinfo函数返回值
+        int                  rv = -1;
+		struct  addrinfo     hints;    //定义一个结构体
+		struct  addrinfo    *res;     //定义函数返回的结构体链表的指针
+		struct  addrinfo    *readIP;    //定义一个遍历链表的指针
          
         sockfd=socket(AF_INET, SOCK_STREAM, 0);
         if(sockfd < 0)
@@ -216,7 +173,6 @@ int socket_init(char *servip,int port)
         for (readIP = res; readIP != NULL; readIP = readIP->ai_next)   //遍历链表每一个节点，查询关于存储返回的IP的信息
         {
                   addr = (struct sockaddr_in *)readIP->ai_addr;  //将返回的IP信息存储在addr指向的结构体中
-//                  servip = inet_ntoa(addr->sin_addr);
                   printf("IP address: %s\n", inet_ntoa(addr->sin_addr));  //inet_ntoa函数将字符串类型IP地址转化为点分十进制
         }
         servip = inet_ntoa(addr->sin_addr);
@@ -236,4 +192,5 @@ int socket_init(char *servip,int port)
         }
         printf("Connect to Server [%s:%d] successfully!\n", servip,  port);
 
+		return sockfd;
 }
