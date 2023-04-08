@@ -23,6 +23,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "ds18b20.h"
 
 
 #define  Msg_str "Hi server!"
@@ -44,6 +45,7 @@ void print_usage(char *proname)
 
 int main(int argc,char **argv)
 {
+	
         char                  msg_str[1024];
         int                   sockfd = -1;
         int                   rv = -1;
@@ -51,7 +53,9 @@ int main(int argc,char **argv)
         int                   port = 0;
         char                  buf[1024];
         int                   ch;
-		char                 *time;   //设置上报数据时间
+	char                 *time;   //设置上报数据时间
+        float                 temp;
+        char                  sn[32];
         struct option         opts[] = {
                 {"ipaddr",required_argument,NULL,'i'},
                 {"port",required_argument,NULL,'p'},
@@ -84,10 +88,24 @@ int main(int argc,char **argv)
                 return 0;
         }
 
-        sockfd=socket_init(servip,port);
+        if( (sockfd=socket_init(servip,port)) < 0)
+	{
+		printf("socket failure.\n");
+		//return -1;
+	}
 
-        rv=write(sockfd, Msg_str, strlen(Msg_str));
-        if(rv < 0)
+        if( get_temperature(&temp, sn) < 0 )
+	{
+		printf("get temperature failure.\n");
+		return -2;
+	}
+        
+
+        snprintf(msg_str,sizeof(msg_str),"%f,%s",temp,sn);
+	printf("msg_str:%s\n",msg_str);
+
+        rv=write(sockfd, msg_str, strlen(msg_str));
+        if( rv < 0 )
         {
           
                      printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
@@ -119,6 +137,7 @@ int main(int argc,char **argv)
                         printf("Read %d bytes data from Server : %s\n",rv,buf);
                 }
 
+		memset(msg_str,0,sizeof(msg_str));
                 printf("Send message to Server:");
                 scanf("%s",msg_str);
                 rv=write(sockfd, msg_str, strlen(msg_str));
