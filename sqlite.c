@@ -11,24 +11,25 @@
  *                 
  ********************************************************************************/
 #include <stdio.h>
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include <stdlib.h>
 #include <string.h>
-/* *************************************************************************** */
 
 
-int rows,cols;
-char **dbresult;
-sqlite3_stmt *pStmt = NULL;
-sqlite3    *db;
-char       *zErrMsg = 0;
-int         rc;
-char       *sql;
-typedef struct {
-        char   report_time[64];
-        float  temp;
-        char   sn[64];
-    } myData;
+int            rows,cols;
+char         **dbresult;
+sqlite3_stmt  *pStmt = NULL;
+sqlite3       *db;
+char          *zErrMsg = 0;
+int            rc;
+char          *sql;
+
+typedef struct{
+     char       report_time[64];
+     float      temp;
+     char       sn[64];
+}myData;
+
 
 
 int sqlite_init ()
@@ -46,7 +47,6 @@ int sqlite_init ()
 		fprintf(stderr,"Open database Successfully\n");
 
 	}
-
 
 	/* Create SQL statement */
 	const char *sql = "DROP TABLE IF EXISTS TEMP;" 
@@ -86,7 +86,6 @@ int sqlite_insert(myData data)
 
     }
 
-
 	/* insert data  */
     const char *newSql = "INSERT INTO TEMP(Data) VALUES(?)"; // 插入新值
     rc = sqlite3_prepare(db, newSql, -1, &pStmt, NULL);
@@ -115,6 +114,7 @@ int sqlite_insert(myData data)
 
 }
 
+
 int sqlite_select()
 {
    /* Open database */
@@ -128,7 +128,6 @@ int sqlite_select()
       fprintf(stderr, "Opened database for SELECT successfully\n");
    }
 
-
    /* Create SQL statement */
    sqlite3_get_table(db,"select * from TEMP",&dbresult,&rows,NULL,NULL); //查看最后一条数据
    if( rows <= 0)
@@ -136,9 +135,9 @@ int sqlite_select()
 	   printf ("No data for select\n");
 	   return -2;
    }
-   sql=sqlite3_mprintf("SELECT Data from TEMP WHERE ID =  %d",rows);
-
    
+   sql=sqlite3_mprintf("SELECT Data from TEMP WHERE ID = %d;",rows);
+    
    /* Execute SQL statement */
    rc = sqlite3_prepare_v2(db, sql, -1, &pStmt, NULL);
    if( rc != SQLITE_OK )
@@ -149,22 +148,18 @@ int sqlite_select()
 	    return -3;
    }
 
-    rc = sqlite3_step(pStmt);
-    if (rc != SQLITE_DONE)
-    {
-		printf("execution failed: %s", sqlite3_errmsg(db));
-		return -4;
-	}
+   rc = sqlite3_step(pStmt);
 
-    myData *pData = (myData*)sqlite3_column_blob(pStmt, 0);
+   myData *pData = ( myData*)sqlite3_column_blob(pStmt, 0);
 
-    printf("%s, %f, %s\n", pData->report_time, pData->temp, pData->sn);
+   printf("%s, %f, %s\n", pData->report_time, pData->temp, pData->sn);
 
-    sqlite3_finalize(pStmt);   
-    sqlite3_close(db);
+   sqlite3_finalize(pStmt);   
+   sqlite3_close(db);
 
-    return 0;
+   return 0;
 }
+
 
 int sqlite_delete()
 {
@@ -180,7 +175,6 @@ int sqlite_delete()
       fprintf(stderr, "Opened database for DELETE successfully\n");
    }
 
-
    /* Create merged SQL statement */
    sqlite3_get_table(db,"select * from TEMP",&dbresult,&rows,NULL,NULL); //删除最后一条数据
    if( rows <= 0)
@@ -191,7 +185,6 @@ int sqlite_delete()
    }
    sql=sqlite3_mprintf("DELETE from TEMP where ID = %d; ",rows);
    
-
    /* Execute SQL statement */
    rc = sqlite3_prepare_v2(db, sql, -1, &pStmt, NULL);
    if( rc != SQLITE_OK ){
