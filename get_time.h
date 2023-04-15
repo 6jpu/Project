@@ -16,8 +16,6 @@
 
 extern int get_time(char *report_time);
 
-
-
  
 #endif
 
