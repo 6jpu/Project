@@ -20,7 +20,6 @@ int get_time(char *report_time)
 	time_t timer;
 
 	timer= time(NULL);
-	printf("%ld\n", timer);
 	struct tm* plocaltime = localtime(&timer);
 	sprintf(report_time,"%d-%d-%d %d:%d:%d", plocaltime->tm_year + 1900, plocaltime->tm_mon + 1, plocaltime->tm_mday,
                        plocaltime->tm_hour,plocaltime->tm_min,plocaltime->tm_sec);

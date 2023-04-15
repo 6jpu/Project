@@ -24,6 +24,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "ds18b20.h"
+#include "get_time.h"
+#include "sqlite.h"
 
 
 #define  Msg_str "Hi server!"
@@ -45,7 +47,8 @@ void print_usage(char *proname)
 
 int main(int argc,char **argv)
 {
-	
+	   
+	    myData                data;
         char                  msg_str[1024];
         int                   sockfd = -1;
         int                   rv = -1;
@@ -53,9 +56,8 @@ int main(int argc,char **argv)
         int                   port = 0;
         char                  buf[1024];
         int                   ch;
-	char                 *time;   //设置上报数据时间
-        float                 temp;
-        char                  sn[32];
+    	char                 *report_time;   //上报数据时间
+    	char                 *time;  //现在时间
         struct option         opts[] = {
                 {"ipaddr",required_argument,NULL,'i'},
                 {"port",required_argument,NULL,'p'},
@@ -89,27 +91,57 @@ int main(int argc,char **argv)
         }
 
         if( (sockfd=socket_init(servip,port)) < 0)
-	{
+    	{
 		printf("socket failure.\n");
 		//return -1;
-	}
+		}
 
-        if( get_temperature(&temp, sn) < 0 )
-	{
+		/* 获取上报数据 */
+        if( get_temperature(&data.temp, data.sn) < 0 )
+		{
 		printf("get temperature failure.\n");
 		return -2;
-	}
-        
-
-        snprintf(msg_str,sizeof(msg_str),"%f,%s",temp,sn);
-	printf("msg_str:%s\n",msg_str);
+		}
+		/* 获取上报时间 */
+        get_time(data.report_time);
+        /* 生成字符串 */
+        snprintf(msg_str,sizeof(msg_str),"%f,%s,%s",data.temp,data.sn,data.report_time);
+		printf("msg_str:%s\n",msg_str);
 
         rv=write(sockfd, msg_str, strlen(msg_str));
         if( rv < 0 )
         {
-          
-                     printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
-                     return -3; 
+            /* 上报数据失败则存入数据库 */
+			printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+		    if( sqlite_init() < 0)
+			{
+				printf ("Failed initial database\n");
+				return -3;
+			}
+			
+			if( sqlite_insert(data) < 0)
+			{
+				printf ("Failed to save data into database\n");
+			    return -3;
+		    }
+
+			if( sqlite_select() < 0)
+			{
+				printf ("Select data from database failure\n");
+				return -3;
+			}
+/*             if( sqlite_delete() < 0 )
+			{
+				printf ("Delete data from database failure\n");
+				return -3;
+			}
+			if( sqlite_select() < 0)
+			{
+				printf ("Select data from database failure\n");
+			}
+*/
+
+
         }
 
         while(1)
