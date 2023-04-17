@@ -115,7 +115,7 @@ int sqlite_insert(myData data)
 }
 
 
-int sqlite_select()
+int sqlite_select(char *str)
 {
    /* Open database */
    rc = sqlite3_open("temp_data.db", &db);
@@ -152,7 +152,8 @@ int sqlite_select()
 
    myData *pData = ( myData*)sqlite3_column_blob(pStmt, 0);
 
-   printf("%s, %f, %s\n", pData->report_time, pData->temp, pData->sn);
+   sprintf(str,"%s,%f,%s", pData->report_time, pData->temp, pData->sn);
+   printf ("%s\n",str);
 
    sqlite3_finalize(pStmt);   
    sqlite3_close(db);

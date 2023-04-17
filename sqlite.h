@@ -19,10 +19,13 @@ typedef struct{
 	char       sn[64];
 }myData;
  
-
+/* 创建名为temp_data的数据库并创建名为TEMP的表格，正常退出返回0，创建失败返回负数 */
 extern int sqlite_init();
+/* 向TEMP的data插入结构体数据，正常退出返回0，出错返回负数 */
 extern int sqlite_insert(myData data);
-extern int sqlite_select();
+/* 自动选择表中最后一行数据存入传入参数数组并打印，正常退出，出错返回负数 */
+extern int sqlite_select(char *str);
+/* 自动选择表中最后一行数据删除，正常退出返回0，出错返回负数 */
 extern int sqlite_delete();
  
 #endif

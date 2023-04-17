@@ -23,12 +23,11 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <time.h>
 #include "ds18b20.h"
 #include "get_time.h"
 #include "sqlite.h"
 
-
-#define  Msg_str "Hi server!"
 
 
 int socket_init(char *servip,int port);
@@ -47,8 +46,10 @@ void print_usage(char *proname)
 
 int main(int argc,char **argv)
 {
-	   
-	    myData                data;
+	    time_t                current_timer;     //当前时间戳
+		time_t                report_timer;		//采样时间戳
+	    long                  sleep_timer;
+		myData                data;
         char                  msg_str[1024];
         int                   sockfd = -1;
         int                   rv = -1;
@@ -56,13 +57,13 @@ int main(int argc,char **argv)
         int                   port = 0;
         char                  buf[1024];
         int                   ch;
-    	char                 *report_time;   //上报数据时间
-    	char                 *time;  //现在时间
+    	char                 *report_time;     //上报数据时间
+    	int                   set_time=3;      //设置上报时间间隔，默认为三秒
         struct option         opts[] = {
                 {"ipaddr",required_argument,NULL,'i'},
                 {"port",required_argument,NULL,'p'},
                 {"time",required_argument,NULL,'t'},
-                {"help",no_argument,NULL,'h'},\
+                {"help",no_argument,NULL,'h'},
                 {NULL,0,NULL,0}
         };
 
@@ -77,10 +78,13 @@ int main(int argc,char **argv)
                                 port=atoi(optarg);
                                 break;
 						case 't':
-								time=optarg;
+								set_time=atoi(optarg);
+								break;
                         case 'h':
                                 print_usage(argv[0]);
                                 return 0;
+						default:
+								print_usage(argv[0]);
                 }
         }
 
@@ -92,99 +96,199 @@ int main(int argc,char **argv)
 
         if( (sockfd=socket_init(servip,port)) < 0)
     	{
-		printf("socket failure.\n");
-		//return -1;
+  			printf("socket failure.\n");
+			//return -1;
 		}
 
-		/* 获取上报数据 */
-        if( get_temperature(&data.temp, data.sn) < 0 )
-		{
-		printf("get temperature failure.\n");
-		return -2;
+
+		/* 创建数据库表格 */
+		if( sqlite_init() < 0)
+		{   
+			printf ("Failed initial database\n");
+			return -3; 
 		}
-		/* 获取上报时间 */
-        get_time(data.report_time);
-        /* 生成字符串 */
-        snprintf(msg_str,sizeof(msg_str),"%f,%s,%s",data.temp,data.sn,data.report_time);
-		printf("msg_str:%s\n",msg_str);
 
-        rv=write(sockfd, msg_str, strlen(msg_str));
-        if( rv < 0 )
-        {
-            /* 上报数据失败则存入数据库 */
-			printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
-		    if( sqlite_init() < 0)
-			{
-				printf ("Failed initial database\n");
-				return -3;
-			}
-			
-			if( sqlite_insert(data) < 0)
-			{
-				printf ("Failed to save data into database\n");
-			    return -3;
-		    }
-
-			if( sqlite_select() < 0)
-			{
-				printf ("Select data from database failure\n");
-				return -3;
-			}
-/*             if( sqlite_delete() < 0 )
-			{
-				printf ("Delete data from database failure\n");
-				return -3;
-			}
-			if( sqlite_select() < 0)
-			{
-				printf ("Select data from database failure\n");
-			}
-*/
-
-
-        }
 
         while(1)
-        {
+        {        			    
+
+Report:		current_timer = time(NULL);
+            sleep_timer = current_timer-report_timer;
+            if( sleep_timer < set_time )
+            {
+				model = 0;
+            }
+			else
+			{
+				model = 1;
+			}
+			if( model == 0 )
+			{
+
+			memset(msg_str,0,sizeof(msg_str));
+			/* 如果数据库有数据则先发送该数据 */
+			while( sqlite_select(msg_str) == 0 )
+			{
+	            /* 上报客户端 */
+				rv=write(sockfd, msg_str, strlen(msg_str));
+				if( rv < 0 ) 
+				{   
+					/* 上报数据失败则存入数据库 */
+					printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+					close(sockfd);
+					goto DB;
+		
+				}    
+
+				memset(buf, 0, sizeof(buf));
+				rv=read(sockfd, buf, sizeof(buf));
+				if(rv < 0)
+				{   
+					/* 未收到确认回复则存入数据库 */
+					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd    
+										,strerror(errno));
+					close(sockfd);
+					goto DB;
+		
+				}   
+				else if(rv == 0)
+				{   
+					/* 服务器断开则存入数据库 */
+					printf("Scoket [%d] get disconnected\n",sockfd);
+					close(sockfd);
+					goto DB;
+				}   
+				else if(rv > 0)
+				{   
+					printf("Read %d bytes data from Server : %s\n",rv,buf);
+				}    
                 
-                memset(buf, 0, sizeof(buf));
-                rv=read(sockfd, buf, sizeof(buf));
-         
-                if(rv < 0)
-                {
                 
-                        printf("Read from Server by sockfd[%d] failure : %s\n",sockfd                  
-                                        ,strerror(errno));
+				/* 从数据库中删除已发送的数据 */
+				if( sqlite_delete() < 0 )
+				{
+					printf ("Delete data from database failure\n");
+					return -3;
+				}
+			}
 
-                        break;
-         
-                }
-                else if(rv == 0)
-                {
-                        printf("Scoket [%d] get disconnected\n",sockfd);
-                        break;
-                }
-                else if(rv > 0)
-                {
-                        printf("Read %d bytes data from Server : %s\n",rv,buf);
-                }
+			}
 
-		memset(msg_str,0,sizeof(msg_str));
-                printf("Send message to Server:");
-                scanf("%s",msg_str);
-                rv=write(sockfd, msg_str, strlen(msg_str));
-                if(rv < 0)
+            
+			if( model == 1)
+			{
 
-                {
+			/* 获取上报温度 */
+			if( get_temperature(&data.temp) < 0 )
+			{
+				printf("get temperature failure.\n");
+				return -2;
+			}
+			/* 获取上报产品序列号 */
+			if( get_sn(data.sn) < 0)
+			{
+				printf ("get sn failure.\n");
+				return -2;
+			}
+			/* 获取上报时间 */
+            report_timer = time(NULL); 
+			get_time(data.report_time);
+			/* 生成字符串 */	
+			memset(msg_str,0,sizeof(msg_str));
+			snprintf(msg_str,sizeof(msg_str),"%f,%s,%s\n",data.temp,data.sn,data.report_time);
+			printf("msg_str:%s\n",msg_str);
+			/* 上报客户端 */
+			rv=write(sockfd, msg_str, strlen(msg_str));
+			if( rv < 0 ) 
+			{   
+				/* 上报数据失败则存入数据库 */
 
-                        printf("Write to Server by sockfd[%d] failure : %s\n",sockfd
-                                ,strerror(errno));
-                        return -3;
-        
-                }
+				printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+                close(sockfd);
+                break;
+	
+			}       
+
+			memset(buf, 0, sizeof(buf));
+			rv=read(sockfd, buf, sizeof(buf));
+			if(rv < 0)
+			{
+				/* 未收到确认回复则存入数据库 */
+				printf("Read from Server by sockfd[%d] failure : %s\n",sockfd                  
+									,strerror(errno));
+				close(sockfd);
+				break;
+	 
+			}
+			else if(rv == 0)
+			{
+				/* 服务器断开则存入数据库 */
+				printf("Scoket [%d] get disconnected\n",sockfd);
+				close(sockfd);
+				break;
+			}
+			else if(rv > 0)
+			{
+				printf("Read %d bytes data from Server : %s\n",rv,buf);
+			}
+ 
+			
+            sleep(set_time);
+
+			}
+
         }
 
-        close(sockfd);
+
+		while(1)
+		{
+DB:			/* 存入数据库 */	
+			if( sqlite_insert(data) < 0)
+			{   
+				printf ("Failed to save data into database\n");
+				return -3; 
+			}   
+
+			if( sqlite_select() < 0)
+			{   
+				printf ("Select data from database failure\n");
+				return -3; 
+			}   
+	        
+
+			/* 尝试重新连接服务器 */
+			if( (sockfd=socket_init(servip,port)) >= 0)
+			{
+				printf("socket reconnect successfully.\n");
+				goto Report;
+			}
+
+            current_timer = time(NULL);
+			sleep_timer = current_timer-report_timer;
+			if( sleep_timer < set_time )
+			{
+				sleep( set_time-sleep_timer );
+			}
+			/* 重新连接失败则继续存入数据库 */
+			/* 获取上报温度 */
+			if( get_temperature(&data.temp) < 0 )
+			{
+				printf("get temperature failure.\n");
+				return -2;
+			}
+			/* 获取上报产品序列号 */
+			if( get_sn(data.sn) < 0)
+			{
+				printf ("get sn failure.\n");
+				return -2;
+			}
+			/* 获取上报时间 */
+			report_timer = time(NULL);
+			get_time(data.report_time);
+            
+
+		}
+
 
         return 0;
 }
