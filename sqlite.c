@@ -132,7 +132,7 @@ int sqlite_select(char *str)
    sqlite3_get_table(db,"select * from TEMP",&dbresult,&rows,NULL,NULL); //查看最后一条数据
    if( rows <= 0)
    {
-	   printf ("No data for select\n");
+	   printf ("No data for select in database\n");
 	   return -2;
    }
    

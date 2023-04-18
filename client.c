@@ -46,8 +46,9 @@ void print_usage(char *proname)
 
 int main(int argc,char **argv)
 {
+        int                   model;             //model为0则未到上报时间，为1则已到上报时间
 	    time_t                current_timer;     //当前时间戳
-		time_t                report_timer;		//采样时间戳
+		time_t                report_timer;	     //采样时间戳
 	    long                  sleep_timer;
 		myData                data;
         char                  msg_str[1024];
@@ -112,129 +113,136 @@ int main(int argc,char **argv)
         while(1)
         {        			    
 
-Report:		current_timer = time(NULL);
+Report:		
+			/* 获取上报时间 */
+			report_timer = time(NULL); 
+			get_time(data.report_time);
+
+			current_timer = time(NULL);
             sleep_timer = current_timer-report_timer;
             if( sleep_timer < set_time )
             {
 				model = 0;
             }
-			else
+
+			if( model == 0 )
+			{
+                /* 如果还没到上报时间则先发送数据库里的内容 */
+				memset(msg_str,0,sizeof(msg_str));
+				while( sqlite_select(msg_str) == 0 )
+				{
+					/* 上报客户端 */
+					rv=write(sockfd, msg_str, strlen(msg_str));
+					if( rv < 0 ) 
+					{   
+						/* 上报数据失败则存入数据库 */
+						printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+						close(sockfd);
+						goto DB;
+			
+					}    
+
+					memset(buf, 0, sizeof(buf));
+					rv=read(sockfd, buf, sizeof(buf));
+					if(rv < 0)
+					{   
+						/* 未收到确认回复则存入数据库 */
+						printf("Read from Server by sockfd[%d] failure : %s\n",sockfd    
+											,strerror(errno));
+						close(sockfd);
+						goto DB;
+			
+					}   
+					else if(rv == 0)
+					{   
+						/* 服务器断开则存入数据库 */
+						printf("Scoket [%d] get disconnected\n",sockfd);
+						close(sockfd);
+						goto DB;
+					}   
+					else if(rv > 0)
+					{   
+						printf("Read %d bytes data from Server : %s\n",rv,buf);
+					}    
+					
+					
+					/* 从数据库中删除已发送的数据 */
+					if( sqlite_delete() < 0 )
+					{
+						printf ("Delete data from database failure\n");
+						return -3;
+					}
+				}
+			}
+
+
+
+            current_timer = time(NULL);
+			sleep_timer = current_timer-report_timer;
+			if( sleep_timer < set_time )
+			{
+				sleep( set_time-sleep_timer );
+				model = 1;
+			}
+            else
 			{
 				model = 1;
 			}
-			if( model == 0 )
+            
+			if( model == 1)
 			{
-
-			memset(msg_str,0,sizeof(msg_str));
-			/* 如果数据库有数据则先发送该数据 */
-			while( sqlite_select(msg_str) == 0 )
-			{
-	            /* 上报客户端 */
+                /* 如果到上报时间则先采样上报数据 */ 
+				/* 获取上报温度 */
+				if( get_temperature(&data.temp) < 0 )
+				{
+					printf("get temperature failure.\n");
+					return -2;
+				}
+				/* 获取上报产品序列号 */
+				if( get_sn(data.sn) < 0)
+				{
+					printf ("get sn failure.\n");
+					return -2;
+				}
+				/* 生成字符串 */	
+				memset(msg_str,0,sizeof(msg_str));
+				snprintf(msg_str,sizeof(msg_str),"%s,%f,%s\n",data.report_time,data.temp,data.sn);
+				printf("msg_str:%s\n",msg_str);
+				/* 上报客户端 */
 				rv=write(sockfd, msg_str, strlen(msg_str));
 				if( rv < 0 ) 
 				{   
 					/* 上报数据失败则存入数据库 */
+
 					printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
 					close(sockfd);
-					goto DB;
+					break;
 		
-				}    
+				}       
 
 				memset(buf, 0, sizeof(buf));
 				rv=read(sockfd, buf, sizeof(buf));
 				if(rv < 0)
-				{   
+				{
 					/* 未收到确认回复则存入数据库 */
-					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd    
+					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd                  
 										,strerror(errno));
 					close(sockfd);
-					goto DB;
-		
-				}   
+					break;
+		 
+				}
 				else if(rv == 0)
-				{   
+				{
 					/* 服务器断开则存入数据库 */
 					printf("Scoket [%d] get disconnected\n",sockfd);
 					close(sockfd);
-					goto DB;
-				}   
-				else if(rv > 0)
-				{   
-					printf("Read %d bytes data from Server : %s\n",rv,buf);
-				}    
-                
-                
-				/* 从数据库中删除已发送的数据 */
-				if( sqlite_delete() < 0 )
-				{
-					printf ("Delete data from database failure\n");
-					return -3;
+					break;
 				}
-			}
-
-			}
-
-            
-			if( model == 1)
-			{
-
-			/* 获取上报温度 */
-			if( get_temperature(&data.temp) < 0 )
-			{
-				printf("get temperature failure.\n");
-				return -2;
-			}
-			/* 获取上报产品序列号 */
-			if( get_sn(data.sn) < 0)
-			{
-				printf ("get sn failure.\n");
-				return -2;
-			}
-			/* 获取上报时间 */
-            report_timer = time(NULL); 
-			get_time(data.report_time);
-			/* 生成字符串 */	
-			memset(msg_str,0,sizeof(msg_str));
-			snprintf(msg_str,sizeof(msg_str),"%f,%s,%s\n",data.temp,data.sn,data.report_time);
-			printf("msg_str:%s\n",msg_str);
-			/* 上报客户端 */
-			rv=write(sockfd, msg_str, strlen(msg_str));
-			if( rv < 0 ) 
-			{   
-				/* 上报数据失败则存入数据库 */
-
-				printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
-                close(sockfd);
-                break;
-	
-			}       
-
-			memset(buf, 0, sizeof(buf));
-			rv=read(sockfd, buf, sizeof(buf));
-			if(rv < 0)
-			{
-				/* 未收到确认回复则存入数据库 */
-				printf("Read from Server by sockfd[%d] failure : %s\n",sockfd                  
-									,strerror(errno));
-				close(sockfd);
-				break;
+				else if(rv > 0)
+				{
+					printf("Read %d bytes data from Server : %s\n",rv,buf);
+				}
 	 
-			}
-			else if(rv == 0)
-			{
-				/* 服务器断开则存入数据库 */
-				printf("Scoket [%d] get disconnected\n",sockfd);
-				close(sockfd);
-				break;
-			}
-			else if(rv > 0)
-			{
-				printf("Read %d bytes data from Server : %s\n",rv,buf);
-			}
- 
-			
-            sleep(set_time);
-
 			}
 
         }
@@ -249,12 +257,6 @@ DB:			/* 存入数据库 */
 				return -3; 
 			}   
 
-			if( sqlite_select() < 0)
-			{   
-				printf ("Select data from database failure\n");
-				return -3; 
-			}   
-	        
 
 			/* 尝试重新连接服务器 */
 			if( (sockfd=socket_init(servip,port)) >= 0)
@@ -269,6 +271,7 @@ DB:			/* 存入数据库 */
 			{
 				sleep( set_time-sleep_timer );
 			}
+
 			/* 重新连接失败则继续存入数据库 */
 			/* 获取上报温度 */
 			if( get_temperature(&data.temp) < 0 )
