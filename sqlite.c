@@ -5,7 +5,7 @@
  *       Filename:  test.c
  *    Description:  This file test sqlite
  *                 
- *        Version:  1.0.0(2023年04月10日)
+ *        Version:  1.0.0(2023年04月18日)
  *         Author:  Kun_ <1433729173@qq.com>
  *      ChangeLog:  1, Release initial version on "2023年04月10日 17时25分12秒"
  *                 
@@ -32,19 +32,19 @@ typedef struct{
 
 
 
-int sqlite_init ()
+int sqlite_init()
 {
 
     /* Open database */
-	rc = sqlite3_open("temp_data.db",&db);	
-	if( rc )  //0:Successful result 
+	rc = sqlite3_open("temp_data.db", &db);	
+	if ( rc )  //0:Successful result 
 	{
-		fprintf(stderr,"Can't open database: %s\n",sqlite3_errmsg(db));
+		fprintf(stderr,"Can't open database: %s\n", sqlite3_errmsg(db));
 		return -1;
 	}
     else 
 	{
-		fprintf(stderr,"Open database Successfully\n");
+		fprintf(stderr, "Open database Successfully\n");
 
 	}
 
@@ -54,15 +54,15 @@ int sqlite_init ()
     
 	/* Execute SQL statement */
     rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-    if( rc != SQLITE_OK )
+    if ( rc != SQLITE_OK )
     {
-        fprintf(stderr, "SQL error :%s\n",zErrMsg);
+        fprintf(stderr, "SQL error :%s\n", zErrMsg);
         sqlite3_free(zErrMsg);
 		return -2;
     }
     else
     {
-        fprintf(stderr,"Table created Successfully\n");
+        fprintf(stderr, "Table created Successfully\n");
     }
 
     sqlite3_close(db);
@@ -75,29 +75,28 @@ int sqlite_insert(myData data)
 
     /* Open database */
     rc = sqlite3_open("temp_data.db",&db);
-    if( rc )  //0:Successful result 
+    if ( rc )  //0:Successful result 
     {
-        fprintf(stderr,"Can't open database: %s\n",sqlite3_errmsg(db));
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
         return -1;
     }
     else
     {
-        fprintf(stderr,"Open database for insert Successfully\n");
+        fprintf(stderr, "Open database for insert Successfully\n");
 
     }
 
 	/* insert data  */
     const char *newSql = "INSERT INTO TEMP(Data) VALUES(?)"; // 插入新值
     rc = sqlite3_prepare(db, newSql, -1, &pStmt, NULL);
-    if (rc != SQLITE_OK) {
-        
-        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
-        
+    if (rc != SQLITE_OK) 
+	{    
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));   
         return -2;
     }
 
     myData data_in = data; // 准备要写入的值
-	printf ("sn:%s temp:%f time:%s\n",data_in.sn,data_in.temp,data_in.report_time);
+	printf ("sn:%s temp:%f time:%s\n", data_in.sn, data_in.temp, data_in.report_time);
 
     sqlite3_bind_blob(pStmt, 1, &data_in, sizeof(data_in), SQLITE_STATIC); // 绑定需要写入的值
     rc = sqlite3_step(pStmt);
@@ -119,7 +118,8 @@ int sqlite_select(char *str)
 {
    /* Open database */
    rc = sqlite3_open("temp_data.db", &db);
-   if( rc ){
+   if ( rc )
+   {
       fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
       return -1;
    }
@@ -129,18 +129,18 @@ int sqlite_select(char *str)
    }
 
    /* Create SQL statement */
-   sqlite3_get_table(db,"select * from TEMP",&dbresult,&rows,NULL,NULL); //查看最后一条数据
-   if( rows <= 0)
+   sqlite3_get_table(db, "select * from TEMP", &dbresult, &rows, NULL, NULL); //查看最后一条数据
+   if ( rows <= 0)
    {
 	   printf ("No data for select in database\n");
 	   return -2;
    }
    
-   sql=sqlite3_mprintf("SELECT Data from TEMP WHERE ID = %d;",rows);
+   sql=sqlite3_mprintf("SELECT Data from TEMP WHERE ID = %d;", rows);
     
    /* Execute SQL statement */
    rc = sqlite3_prepare_v2(db, sql, -1, &pStmt, NULL);
-   if( rc != SQLITE_OK )
+   if ( rc != SQLITE_OK )
    {
 	    fprintf(stderr, "Failed to prepare statement\n");		      
 		fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -152,8 +152,8 @@ int sqlite_select(char *str)
 
    myData *pData = ( myData*)sqlite3_column_blob(pStmt, 0);
 
-   sprintf(str,"%s,%f,%s", pData->report_time, pData->temp, pData->sn);
-   printf ("%s\n",str);
+   sprintf(str, "%s,%f,%s", pData->report_time, pData->temp, pData->sn);
+   printf("%s\n",str);
 
    sqlite3_finalize(pStmt);   
    sqlite3_close(db);
@@ -166,7 +166,7 @@ int sqlite_delete()
 {
    /* Open database */
    rc = sqlite3_open("temp_data.db", &db);
-   if( rc )
+   if ( rc )
    {
       fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
       return -1;
@@ -177,18 +177,18 @@ int sqlite_delete()
    }
 
    /* Create merged SQL statement */
-   sqlite3_get_table(db,"select * from TEMP",&dbresult,&rows,NULL,NULL); //删除最后一条数据
-   if( rows <= 0)
+   sqlite3_get_table(db, "select * from TEMP", &dbresult, &rows, NULL, NULL); //删除最后一条数据
+   if ( rows <= 0)
    {
 	   printf ("No data for delete\n");
 	   return -2;
-      
    }
-   sql=sqlite3_mprintf("DELETE from TEMP where ID = %d; ",rows);
+   sql=sqlite3_mprintf("DELETE from TEMP where ID = %d;", rows);
    
    /* Execute SQL statement */
    rc = sqlite3_prepare_v2(db, sql, -1, &pStmt, NULL);
-   if( rc != SQLITE_OK ){
+   if ( rc != SQLITE_OK )
+   {
       fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
    }
    else

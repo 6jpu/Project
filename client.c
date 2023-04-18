@@ -5,7 +5,7 @@
  *       Filename:  client.c
  *    Description:  This file socket client
  *                 
- *        Version:  1.0.0(2023年04月07日)
+ *        Version:  1.0.0(2023年04月18日)
  *         Author:  Kun_ <1433729173@qq.com>
  *      ChangeLog:  1, Release initial version on "2023年04月07日 17时00分57秒"
  *                 
@@ -61,16 +61,16 @@ int main(int argc,char **argv)
     	char                 *report_time;     //上报数据时间
     	int                   set_time=3;      //设置上报时间间隔，默认为三秒
         struct option         opts[] = {
-                {"ipaddr",required_argument,NULL,'i'},
-                {"port",required_argument,NULL,'p'},
-                {"time",required_argument,NULL,'t'},
-                {"help",no_argument,NULL,'h'},
-                {NULL,0,NULL,0}
+                {"ipaddr", required_argument, NULL, 'i'},
+                {"port", required_argument, NULL, 'p'},
+                {"time", required_argument, NULL, 't'},
+                {"help", no_argument, NULL, 'h'},
+                {NULL, 0, NULL, 0}
         };
 
-        while ((ch=getopt_long(argc, argv, "i:p:t:h",opts,NULL)) != -1)
+        while ((ch=getopt_long(argc, argv, "i:p:t:h", opts, NULL)) != -1)
         {
-                switch(ch)
+                switch (ch)
                 {
                         case 'i':
                                 servip=optarg;
@@ -89,28 +89,27 @@ int main(int argc,char **argv)
                 }
         }
 
-        if (!servip || !port)
+        if ( !servip || !port )
         {
                 print_usage(argv[0]);
                 return 0;
         }
 
-        if( (sockfd=socket_init(servip,port)) < 0)
+        if ( (sockfd=socket_init(servip,port)) < 0)
     	{
   			printf("socket failure.\n");
-			//return -1;
 		}
 
 
 		/* 创建数据库表格 */
-		if( sqlite_init() < 0)
+		if ( sqlite_init() < 0)
 		{   
 			printf ("Failed initial database\n");
 			return -3; 
 		}
 
 
-        while(1)
+        while (1)
         {        			    
 
 Report:		
@@ -120,23 +119,24 @@ Report:
 
 			current_timer = time(NULL);
             sleep_timer = current_timer-report_timer;
-            if( sleep_timer < set_time )
+            if ( sleep_timer < set_time )
             {
 				model = 0;
             }
 
-			if( model == 0 )
+			if ( model == 0 )
 			{
                 /* 如果还没到上报时间则先发送数据库里的内容 */
 				memset(msg_str,0,sizeof(msg_str));
-				while( sqlite_select(msg_str) == 0 )
+				while ( sqlite_select(msg_str) == 0 )
 				{
 					/* 上报客户端 */
 					rv=write(sockfd, msg_str, strlen(msg_str));
-					if( rv < 0 ) 
+					if ( rv < 0 ) 
 					{   
 						/* 上报数据失败则存入数据库 */
-						printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+						printf("Write to Server by sockfd[%d] failure : %s\n", 
+								sockfd, strerror(errno));
 						close(sockfd);
 						goto DB;
 			
@@ -144,30 +144,30 @@ Report:
 
 					memset(buf, 0, sizeof(buf));
 					rv=read(sockfd, buf, sizeof(buf));
-					if(rv < 0)
+					if (rv < 0)
 					{   
 						/* 未收到确认回复则存入数据库 */
-						printf("Read from Server by sockfd[%d] failure : %s\n",sockfd    
-											,strerror(errno));
+						printf("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
+								strerror(errno));
 						close(sockfd);
 						goto DB;
 			
 					}   
-					else if(rv == 0)
+					else if (rv == 0)
 					{   
 						/* 服务器断开则存入数据库 */
-						printf("Scoket [%d] get disconnected\n",sockfd);
+						printf("Scoket [%d] get disconnected\n", sockfd);
 						close(sockfd);
 						goto DB;
 					}   
 					else if(rv > 0)
 					{   
-						printf("Read %d bytes data from Server : %s\n",rv,buf);
+						printf("Read %d bytes data from Server : %s\n", rv, buf);
 					}    
 					
 					
 					/* 从数据库中删除已发送的数据 */
-					if( sqlite_delete() < 0 )
+					if ( sqlite_delete() < 0 )
 					{
 						printf ("Delete data from database failure\n");
 						return -3;
@@ -179,7 +179,7 @@ Report:
 
             current_timer = time(NULL);
 			sleep_timer = current_timer-report_timer;
-			if( sleep_timer < set_time )
+			if ( sleep_timer < set_time )
 			{
 				sleep( set_time-sleep_timer );
 				model = 1;
@@ -189,32 +189,31 @@ Report:
 				model = 1;
 			}
             
-			if( model == 1)
+			if ( model == 1)
 			{
                 /* 如果到上报时间则先采样上报数据 */ 
 				/* 获取上报温度 */
-				if( get_temperature(&data.temp) < 0 )
+				if ( get_temperature(&data.temp) < 0 )
 				{
 					printf("get temperature failure.\n");
 					return -2;
 				}
 				/* 获取上报产品序列号 */
-				if( get_sn(data.sn) < 0)
+				if ( get_sn(data.sn) < 0)
 				{
 					printf ("get sn failure.\n");
 					return -2;
 				}
 				/* 生成字符串 */	
-				memset(msg_str,0,sizeof(msg_str));
-				snprintf(msg_str,sizeof(msg_str),"%s,%f,%s\n",data.report_time,data.temp,data.sn);
-				printf("msg_str:%s\n",msg_str);
+				memset(msg_str, 0, sizeof(msg_str));
+				snprintf(msg_str, sizeof(msg_str), "%s,%f,%s\n", data.report_time, data.temp, data.sn);
+				printf("msg_str:%s\n", msg_str);
 				/* 上报客户端 */
 				rv=write(sockfd, msg_str, strlen(msg_str));
-				if( rv < 0 ) 
+				if ( rv < 0 ) 
 				{   
 					/* 上报数据失败则存入数据库 */
-
-					printf("Write to Server by sockfd[%d] failure : %s\n",sockfd,strerror(errno));
+					printf("Write to Server by sockfd[%d] failure : %s\n", sockfd, strerror(errno));
 					close(sockfd);
 					break;
 		
@@ -222,25 +221,25 @@ Report:
 
 				memset(buf, 0, sizeof(buf));
 				rv=read(sockfd, buf, sizeof(buf));
-				if(rv < 0)
+				if (rv < 0)
 				{
 					/* 未收到确认回复则存入数据库 */
-					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd                  
-										,strerror(errno));
+					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
+							strerror(errno));
 					close(sockfd);
 					break;
 		 
 				}
-				else if(rv == 0)
+				else if (rv == 0)
 				{
 					/* 服务器断开则存入数据库 */
-					printf("Scoket [%d] get disconnected\n",sockfd);
+					printf("Scoket [%d] get disconnected\n", sockfd);
 					close(sockfd);
 					break;
 				}
-				else if(rv > 0)
+				else if (rv > 0)
 				{
-					printf("Read %d bytes data from Server : %s\n",rv,buf);
+					printf("Read %d bytes data from Server : %s\n", rv, buf);
 				}
 	 
 			}
@@ -248,10 +247,10 @@ Report:
         }
 
 
-		while(1)
+		while (1)
 		{
 DB:			/* 存入数据库 */	
-			if( sqlite_insert(data) < 0)
+			if ( sqlite_insert(data) < 0)
 			{   
 				printf ("Failed to save data into database\n");
 				return -3; 
@@ -259,7 +258,7 @@ DB:			/* 存入数据库 */
 
 
 			/* 尝试重新连接服务器 */
-			if( (sockfd=socket_init(servip,port)) >= 0)
+			if ( (sockfd=socket_init(servip,port)) >= 0)
 			{
 				printf("socket reconnect successfully.\n");
 				goto Report;
@@ -267,20 +266,20 @@ DB:			/* 存入数据库 */
 
             current_timer = time(NULL);
 			sleep_timer = current_timer-report_timer;
-			if( sleep_timer < set_time )
+			if ( sleep_timer < set_time )
 			{
 				sleep( set_time-sleep_timer );
 			}
 
 			/* 重新连接失败则继续存入数据库 */
 			/* 获取上报温度 */
-			if( get_temperature(&data.temp) < 0 )
+			if ( get_temperature(&data.temp) < 0 )
 			{
 				printf("get temperature failure.\n");
 				return -2;
 			}
 			/* 获取上报产品序列号 */
-			if( get_sn(data.sn) < 0)
+			if ( get_sn(data.sn) < 0)
 			{
 				printf ("get sn failure.\n");
 				return -2;
@@ -309,12 +308,12 @@ int socket_init(char *servip,int port)
 		struct  addrinfo    *readIP;    //定义一个遍历链表的指针
          
         sockfd=socket(AF_INET, SOCK_STREAM, 0);
-        if(sockfd < 0)
+        if (sockfd < 0)
         {
-                printf("Create socket failure : %s\n",strerror(errno));
+                printf("Create socket failure : %s\n", strerror(errno));
                 return -1;
         }
-        printf("Create socket[%d] successfully!\n",sockfd);
+        printf("Create socket[%d] successfully!\n", sockfd);
 
         //DNS
         memset(&hints, 0, sizeof(hints));   //将存放信息的结构体清零
@@ -323,12 +322,12 @@ int socket_init(char *servip,int port)
         hints.ai_family = AF_INET;
         hints.ai_protocol = 0;
         get_back = getaddrinfo(servip, NULL, &hints, &res); // 调用函数
-        if(get_back != 0)   //如果函数调用失败
+        if (get_back != 0)   //如果函数调用失败
         {
-                 printf("DNS faliure:%s\n",strerror(errno));
+                 printf("DNS faliure:%s\n", strerror(errno));
                  return -1;
         }
-        for (readIP = res; readIP != NULL; readIP = readIP->ai_next)   //遍历链表每一个节点，查询关于存储返回的IP的信息
+        for (readIP=res; readIP!=NULL; readIP=readIP->ai_next)   //遍历链表每一个节点，查询关于存储返回的IP的信息
         {
                   addr = (struct sockaddr_in *)readIP->ai_addr;  //将返回的IP信息存储在addr指向的结构体中
                   printf("IP address: %s\n", inet_ntoa(addr->sin_addr));  //inet_ntoa函数将字符串类型IP地址转化为点分十进制
@@ -340,11 +339,11 @@ int socket_init(char *servip,int port)
         servaddr.sin_family = AF_INET;
         servaddr.sin_port = htons(port);
 
-        rv=connect(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
-        if(rv < 0)
+        rv=connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+        if (rv < 0)
         {
                 printf("Connect Server[%s:%d] failure : %s\n",
-                                servip,  port, strerror(errno));
+                                servip, port, strerror(errno));
                 return -2;
 
         }
