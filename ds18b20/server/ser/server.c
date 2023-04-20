@@ -5,7 +5,7 @@
  *       Filename:  server.c
  *    Description:  This file to receive data and store
  *                 
- *        Version:  1.0.0(2023年04月18日)
+ *        Version:  2.0.0(2023年04月20日)
  *         Author:  Kun_ <1433729173@qq.com>
  *      ChangeLog:  1, Release initial version on "2023年04月18日 10时59分23秒"
  *                 
@@ -27,6 +27,7 @@
 #include <ctype.h>
 #include "sqlite.h"
 #include "sqlite3.h"
+#include "logger.h"
 
 
 #define  MAX_EVENTS     512
@@ -104,10 +105,10 @@ int main(int argc, char **argv)
         listenfd=socket_server_init(NULL, serv_port);
         if ( listenfd < 0 )
         {
-                printf("ERROR:%s server listen on port %d failur\n", argv[0], serv_port);
+                PARSE_LOG_ERROR("ERROR:%s server listen on port %d failur\n", argv[0], serv_port);
                 return -2;
         }
-        printf("%s server start to listen on port %d\n", argv[0], serv_port);
+        PARSE_LOG_INFO("%s server start to listen on port %d\n", argv[0], serv_port);
         
         //后台运行程序
         if ( daemon_run)
@@ -127,7 +128,7 @@ int main(int argc, char **argv)
         
         if ( epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &event) < 0)
         {
-            printf("epoll add listen socket failure :%s\n", strerror(errno));
+            PARSE_LOG_ERROR("epoll add listen socket failure :%s\n", strerror(errno));
             return -4;
         }
 
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
 		/* 创建数据库及表格 */
 	    if ( sqlite_init() < 0 )
 	    {
-	        printf ("create database and table failure.\n");
+	        PARSE_LOG_ERROR("create database and table failure.\n");
 		    return -5;
     	}
 
@@ -146,12 +147,12 @@ int main(int argc, char **argv)
             events = epoll_wait(epollfd, event_array, MAX_EVENTS, -1);
             if (events <0)
             {
-                printf("epoll failure :%s\n", strerror(errno));
+                PARSE_LOG_ERROR("epoll failure :%s\n", strerror(errno));
                 break;
             }
             else if (events == 0)
             {
-                printf("epoll get timeout\n");
+                PARSE_LOG_WARN("epoll get timeout\n");
                 continue;
              }
 
@@ -159,7 +160,7 @@ int main(int argc, char **argv)
             {
                 if ( (event_array[i].events&EPOLLERR) || (event_array[i].events&EPOLLHUP) )
                 {
-                    printf("epoll_wait get error on fd[%d]:%s\n", event_array[i].data.fd, strerror(errno));
+                    PARSE_LOG_WARN("epoll_wait get error on fd[%d]:%s\n", event_array[i].data.fd, strerror(errno));
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
                     close(event_array[i].data.fd);
                    
@@ -170,7 +171,7 @@ int main(int argc, char **argv)
                 {
                      if ( (connfd=accept(listenfd, (struct sockaddr *)NULL, NULL)) < 0)
                      {
-                          printf("accept new client failure :%s\n", strerror(errno));
+                          PARSE_LOG_INFO("accept new client failure :%s\n", strerror(errno));
                           continue;      
                      }
 
@@ -178,11 +179,11 @@ int main(int argc, char **argv)
                      event.events = EPOLLIN;
                      if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connfd, &event) < 0)
                      {
-                         printf("epoll add client socket failure:%s\n", strerror(errno));
+                         PARSE_LOG_WARN("epoll add client socket failure:%s\n", strerror(errno));
                          close(event_array[i].data.fd);
                          continue;
                      }
-                     printf("epoll add new client socket[%d] successfully.\n", connfd);
+                     PARSE_LOG_INFO("epoll add new client socket[%d] successfully.\n", connfd);
                  }
 
 
@@ -191,7 +192,7 @@ int main(int argc, char **argv)
                         memset(buf, 0, sizeof(buf));
                         if ( (rv=read(event_array[i].data.fd, buf, sizeof(buf))) <= 0)
                         {
-                             printf("socket[%d] read failure or getdisconnect and will be removed.\n", event_array[i].data.fd);
+                             PARSE_LOG_WARN("socket[%d] read failure or getdisconnect and will be removed.\n", event_array[i].data.fd);
                              epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
                              close(event_array[i].data.fd);
                              continue;
@@ -202,7 +203,7 @@ int main(int argc, char **argv)
 							 
                              if ( write(event_array[i].data.fd, MSG, rv) < 0)
                              {
-                                  printf("socket[%d] write failure:%s\n", event_array[i].data.fd, strerror(errno));
+                                  PARSE_LOG_ERROR("socket[%d] write failure:%s\n", event_array[i].data.fd, strerror(errno));
                                   epoll_ctl(epollfd,EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
                                   close(event_array[i].data.fd);
                              }
@@ -217,12 +218,12 @@ int main(int argc, char **argv)
                              temp0 = strtok(NULL, ",");
 							 memset(data.sn, 0, sizeof(data.sn));
                              strcpy(data.sn, temp0);     //序列号
-                             printf ("%s,%f,%s\n", data.report_time, data.temp, data.sn);
+                             PARSE_LOG_DEBUG("%s,%f,%s\n", data.report_time, data.temp, data.sn);
                              
 							 /* 存入数据库 */
 							 if ( sqlite_insert(data) < 0 )
 							 {
-								 printf ("Insert data into database failure.\n");
+								 PARSE_LOG_ERROR("Insert data into database failure.\n");
 								 return -5;
 							 }
 
@@ -248,7 +249,7 @@ int socket_server_init(char *listen_ip,int listen_port)
 
     if ( (listenfd = socket(AF_INET,SOCK_STREAM,0)) < 0)
     {
-        printf("Use socket() to create a TCP socket failure: %s\n", strerror(errno));
+        PARSE_LOG_ERROR("Use socket() to create a TCP socket failure: %s\n", strerror(errno));
         return -1;
     }
 
@@ -270,7 +271,7 @@ int socket_server_init(char *listen_ip,int listen_port)
      {
          if ( inet_pton(AF_INET, listen_ip, &servaddr.sin_addr) <=0 )
          {
-             printf("inet_pton() set listen IP address failure.\n");
+             PARSE_LOG_ERROR("inet_pton() set listen IP address failure.\n");
              rv = -2;
 
              goto CleanUp;
@@ -281,7 +282,7 @@ int socket_server_init(char *listen_ip,int listen_port)
       
         if ( bind(listenfd,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0 )
         {
-            printf("Use bind() to bind the TCP socket failure: %s\n", strerror(errno));
+            PARSE_LOG_ERROR("Use bind() to bind the TCP socket failure: %s\n", strerror(errno));
             rv = -3;
 
             goto CleanUp;
@@ -289,7 +290,7 @@ int socket_server_init(char *listen_ip,int listen_port)
         
         if ( listen(listenfd, 13) < 0)
         {
-            printf("Use bind() to bind the TCP socket failure: %s\n", strerror(errno));
+            PARSE_LOG_ERROR("Use bind() to bind the TCP socket failure: %s\n", strerror(errno));
             rv = -4;
 
             goto CleanUp ;
@@ -314,7 +315,7 @@ CleanUp:
      limit.rlim_cur = limit.rlim_max;
      setrlimit(RLIMIT_NOFILE, &limit);
 
-     printf("set socket open fd max count to %ld\n", limit.rlim_max);
+     PARSE_LOG_INFO("set socket open fd max count to %ld\n", limit.rlim_max);
 
  }
 
