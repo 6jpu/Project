@@ -5,7 +5,7 @@
  *       Filename:  client.c
  *    Description:  This file socket client
  *                 
- *        Version:  1.0.0(2023年04月18日)
+ *        Version:  2.0.0(2023年04月20日)
  *         Author:  Kun_ <1433729173@qq.com>
  *      ChangeLog:  1, Release initial version on "2023年04月07日 17时00分57秒"
  *                 
@@ -27,7 +27,7 @@
 #include "ds18b20.h"
 #include "get_time.h"
 #include "sqlite.h"
-
+#include "logger.h"
 
 
 int socket_init(char *servip,int port);
@@ -97,14 +97,14 @@ int main(int argc,char **argv)
 
         if ( (sockfd=socket_init(servip,port)) < 0)
     	{
-  			printf("socket failure.\n");
+  			PARSE_LOG_WARN("socket failure.\n");
 		}
 
 
 		/* 创建数据库表格 */
 		if ( sqlite_init() < 0)
 		{   
-			printf ("Failed initial database\n");
+			PARSE_LOG_ERROR("Failed initial database\n");
 			return -3; 
 		}
 
@@ -135,7 +135,7 @@ Report:
 					if ( rv < 0 ) 
 					{   
 						/* 上报数据失败则存入数据库 */
-						printf("Write to Server by sockfd[%d] failure : %s\n", 
+						PARSE_LOG_WARN("Write to Server by sockfd[%d] failure : %s\n", 
 								sockfd, strerror(errno));
 						close(sockfd);
 						goto DB;
@@ -147,7 +147,7 @@ Report:
 					if (rv < 0)
 					{   
 						/* 未收到确认回复则存入数据库 */
-						printf("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
+						PARSE_LOG_WARN("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
 								strerror(errno));
 						close(sockfd);
 						goto DB;
@@ -156,20 +156,20 @@ Report:
 					else if (rv == 0)
 					{   
 						/* 服务器断开则存入数据库 */
-						printf("Scoket [%d] get disconnected\n", sockfd);
+						PARSE_LOG_WARN("Scoket [%d] get disconnected\n", sockfd);
 						close(sockfd);
 						goto DB;
 					}   
 					else if(rv > 0)
 					{   
-						printf("Read %d bytes data from Server : %s\n", rv, buf);
+						PARSE_LOG_INFO("Read %d bytes data from Server : %s\n", rv, buf);
 					}    
 					
 					
 					/* 从数据库中删除已发送的数据 */
 					if ( sqlite_delete() < 0 )
 					{
-						printf ("Delete data from database failure\n");
+						PARSE_LOG_ERROR("Delete data from database failure\n");
 						return -3;
 					}
 				}
@@ -195,25 +195,25 @@ Report:
 				/* 获取上报温度 */
 				if ( get_temperature(&data.temp) < 0 )
 				{
-					printf("get temperature failure.\n");
+					PARSE_LOG_ERROR("get temperature failure.\n");
 					return -2;
 				}
 				/* 获取上报产品序列号 */
 				if ( get_sn(data.sn) < 0)
 				{
-					printf ("get sn failure.\n");
+					PARSE_LOG_ERROR("get sn failure.\n");
 					return -2;
 				}
 				/* 生成字符串 */	
 				memset(msg_str, 0, sizeof(msg_str));
 				snprintf(msg_str, sizeof(msg_str), "%s,%f,%s\n", data.report_time, data.temp, data.sn);
-				printf("msg_str:%s\n", msg_str);
+				PARSE_LOG_DEBUG("msg_str:%s\n", msg_str);
 				/* 上报客户端 */
 				rv=write(sockfd, msg_str, strlen(msg_str));
 				if ( rv < 0 ) 
 				{   
 					/* 上报数据失败则存入数据库 */
-					printf("Write to Server by sockfd[%d] failure : %s\n", sockfd, strerror(errno));
+					PARSE_LOG_WARN("Write to Server by sockfd[%d] failure : %s\n", sockfd, strerror(errno));
 					close(sockfd);
 					break;
 		
@@ -224,7 +224,7 @@ Report:
 				if (rv < 0)
 				{
 					/* 未收到确认回复则存入数据库 */
-					printf("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
+					PARSE_LOG_WARN("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
 							strerror(errno));
 					close(sockfd);
 					break;
@@ -233,13 +233,13 @@ Report:
 				else if (rv == 0)
 				{
 					/* 服务器断开则存入数据库 */
-					printf("Scoket [%d] get disconnected\n", sockfd);
+					PARSE_LOG_WARN("Scoket [%d] get disconnected\n", sockfd);
 					close(sockfd);
 					break;
 				}
 				else if (rv > 0)
 				{
-					printf("Read %d bytes data from Server : %s\n", rv, buf);
+					PARSE_LOG_INFO("Read %d bytes data from Server : %s\n", rv, buf);
 				}
 	 
 			}
@@ -252,7 +252,7 @@ Report:
 DB:			/* 存入数据库 */	
 			if ( sqlite_insert(data) < 0)
 			{   
-				printf ("Failed to save data into database\n");
+				PARSE_LOG_ERROR("Failed to save data into database\n");
 				return -3; 
 			}   
 
@@ -260,7 +260,7 @@ DB:			/* 存入数据库 */
 			/* 尝试重新连接服务器 */
 			if ( (sockfd=socket_init(servip,port)) >= 0)
 			{
-				printf("socket reconnect successfully.\n");
+				PARSE_LOG_INFO("socket reconnect successfully.\n");
 				goto Report;
 			}
 
@@ -275,13 +275,13 @@ DB:			/* 存入数据库 */
 			/* 获取上报温度 */
 			if ( get_temperature(&data.temp) < 0 )
 			{
-				printf("get temperature failure.\n");
+				PARSE_LOG_ERROR("get temperature failure.\n");
 				return -2;
 			}
 			/* 获取上报产品序列号 */
 			if ( get_sn(data.sn) < 0)
 			{
-				printf ("get sn failure.\n");
+				PARSE_LOG_ERROR("get sn failure.\n");
 				return -2;
 			}
 			/* 获取上报时间 */
@@ -310,10 +310,10 @@ int socket_init(char *servip,int port)
         sockfd=socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0)
         {
-                printf("Create socket failure : %s\n", strerror(errno));
+                PARSE_LOG_ERROR("Create socket failure : %s\n", strerror(errno));
                 return -1;
         }
-        printf("Create socket[%d] successfully!\n", sockfd);
+        PARSE_LOG_INFO("Create socket[%d] successfully!\n", sockfd);
 
         //DNS
         memset(&hints, 0, sizeof(hints));   //将存放信息的结构体清零
@@ -324,13 +324,13 @@ int socket_init(char *servip,int port)
         get_back = getaddrinfo(servip, NULL, &hints, &res); // 调用函数
         if (get_back != 0)   //如果函数调用失败
         {
-                 printf("DNS faliure:%s\n", strerror(errno));
+                 PARSE_LOG_ERROR("DNS faliure:%s\n", strerror(errno));
                  return -1;
         }
         for (readIP=res; readIP!=NULL; readIP=readIP->ai_next)   //遍历链表每一个节点，查询关于存储返回的IP的信息
         {
                   addr = (struct sockaddr_in *)readIP->ai_addr;  //将返回的IP信息存储在addr指向的结构体中
-                  printf("IP address: %s\n", inet_ntoa(addr->sin_addr));  //inet_ntoa函数将字符串类型IP地址转化为点分十进制
+                  PARSE_LOG_INFO("IP address: %s\n", inet_ntoa(addr->sin_addr));  //inet_ntoa函数将字符串类型IP地址转化为点分十进制
         }
         servip = inet_ntoa(addr->sin_addr);
         freeaddrinfo(res);  //释放getaddrinfo函数调用动态获取的空间
@@ -342,7 +342,7 @@ int socket_init(char *servip,int port)
         rv=connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
         if (rv < 0)
         {
-                printf("Connect Server[%s:%d] failure : %s\n",
+                PARSE_LOG_ERROR("Connect Server[%s:%d] failure : %s\n",
                                 servip, port, strerror(errno));
                 return -2;
 
