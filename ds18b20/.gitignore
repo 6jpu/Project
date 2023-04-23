@@ -1,0 +1,20 @@
+# database
+*.dv
+*.db
+
+#test file
+*.sh
+test.c
+
+#log
+Log/
+
+#lib
+*.so
+*.a
+
+#bin
+a.out
+client
+server
+
