@@ -13,20 +13,14 @@
 #ifndef  _DS18B20_H_
 #define  _DS18B20_H_
 
-#include <stdint.h>
 
 /* 
  * 函数介绍：获取ds18b20的温度
  * 输出参数：将获取到的温度写入temp
  * 返回值：成功返回0，出错返回负数
  * */
-extern int get_temperature(float *temp);
+int get_temperature(float *temp);
 
-/* 
- * 函数介绍：获取ds18b20d的产品序列号
- * 输出参数：将获取到序列号写入sn
- * 返回值：成功返回0，出错返回负数
- * */
-extern int get_sn(char *sn);
- 
+
+
 #endif

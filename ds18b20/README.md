@@ -1,2 +1,9 @@
 # project
-read me
+
+##Install
+
+##Run
+
+##
+
+
