@@ -175,7 +175,7 @@ int main(int argc,char **argv)
 		if ( db_select( msg_str ) == 0 )
 		{
 			printf ("msg_str:%s\n",msg_str);
-			if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
+			if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
 			{
 				socket_close(&sock);
 			}

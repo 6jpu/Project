@@ -25,14 +25,13 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <ctype.h>
-#include "sqlite.h"
+#include "mysqlite.h"
 #include "sqlite3.h"
 #include "logger.h"
 
 
 #define  MAX_EVENTS     512
 #define  ARRAY_SIZE(x)  (sizeof(x)/sizeof(x[0]))
-#define  MSG            "Copy"
 
 static inline void print_usage(char *progname)
 {
@@ -51,22 +50,24 @@ void set_socket_rlimit(void);
 
 int main(int argc, char **argv)
 {
-	    char                 *temp0;	//暂时存放解析出来的数据                           
         int                   listenfd,connfd;
         int                   serv_port = 0;
-        char                 *progname = NULL;
         int                   daemon_run = 0;
         int                   ch;
         int                   i,j;
         int                   rv;
         int                   found;
         int                   max;
-        char                  buf[1024];
-        myData                data;
-        int                   epollfd;
+        char                  msg_str[64];
+		char                  buf[1024];
+        packet_t              pack;
+		int                   epollfd;
         struct epoll_event    event;
         struct epoll_event    event_array[MAX_EVENTS];
         int                   events;  //发生了的事件
+        char                  db_name[32] = "temp_data.db";
+        char                 *progname = NULL;
+	    char                 *temp0;	//暂时存放解析出来的数据                           
 
         struct option         long_options[] = {
                 {"daemon", no_argument, NULL, 'b'},  //后台运行
@@ -105,7 +106,7 @@ int main(int argc, char **argv)
         listenfd=socket_server_init(NULL, serv_port);
         if ( listenfd < 0 )
         {
-                PARSE_LOG_ERROR("ERROR:%s server listen on port %d failur\n", argv[0], serv_port);
+                PARSE_LOG_ERROR("ERROR:%s server listen on port %d failure\n", argv[0], serv_port);
                 return -2;
         }
         PARSE_LOG_INFO("%s server start to listen on port %d\n", argv[0], serv_port);
@@ -134,11 +135,11 @@ int main(int argc, char **argv)
 
 
 		/* 创建数据库及表格 */
-	    if ( sqlite_init() < 0 )
-	    {
-	        PARSE_LOG_ERROR("create database and table failure.\n");
-		    return -5;
-    	}
+		if (  db_init( db_name ) < 0)
+		{   
+			PARSE_LOG_ERROR("Failed initial database\n");
+			return -2; 
+		}
 
 
         for ( ; ; )
@@ -201,33 +202,29 @@ int main(int argc, char **argv)
                         {                                 
                              printf("socket [%d] read %d bytes data:%s \n", event_array[i].data.fd, rv, buf);
 							 
-                             if ( write(event_array[i].data.fd, MSG, rv) < 0)
-                             {
-                                  PARSE_LOG_ERROR("socket[%d] write failure:%s\n", event_array[i].data.fd, strerror(errno));
-                                  epoll_ctl(epollfd,EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
-                                  close(event_array[i].data.fd);
-                             }
-
-
                              /* 解析数据 */
                              temp0 = strtok(buf, ",");  //时间
-							 memset(data.report_time, 0, sizeof(data.report_time));
-                             strcpy(data.report_time, temp0);
+							 memset(pack.time, 0, sizeof(pack.time));
+                             strcpy(pack.time, temp0);
                              temp0 = strtok(NULL, ",");
-                             data.temp = atof(temp0);   //温度
+                             pack.temp = atof(temp0);   //温度
                              temp0 = strtok(NULL, ",");
-							 memset(data.sn, 0, sizeof(data.sn));
-                             strcpy(data.sn, temp0);     //序列号
-                             PARSE_LOG_DEBUG("%s,%f,%s\n", data.report_time, data.temp, data.sn);
+							 memset(pack.devsn, 0, sizeof(pack.devsn));
+                             strcpy(pack.devsn, temp0);     //序列号
+                             PARSE_LOG_DEBUG("%s,%f,%s\n", pack.time, pack.temp, pack.devsn);
                              
 							 /* 存入数据库 */
-							 if ( sqlite_insert(data) < 0 )
+							 if ( db_insert( pack ) < 0 )
 							 {
-								 PARSE_LOG_ERROR("Insert data into database failure.\n");
+								 PARSE_LOG_ERROR("Insert data into database failure\n");
 								 return -5;
 							 }
 
-                         }
+							 /* 查看存入数据库的数据 */
+							 db_select( msg_str );
+							 PARSE_LOG_DEBUG("msg_str in DB:%s\n",msg_str);
+							
+						}
                  
 				 }
 
@@ -237,6 +234,7 @@ int main(int argc, char **argv)
 
 CleanUp:
     close(listenfd);
+	db_close();
     return 0;
 }
 
@@ -254,7 +252,7 @@ int socket_server_init(char *listen_ip,int listen_port)
     }
 
      //解决Address already in use（地址被占用）问题
-    setsockopt(listenfd, SOL_SOCKET, SO_RCVTIMEO, &on, sizeof(on));
+     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
 
      memset(&servaddr, 0, sizeof(servaddr));
