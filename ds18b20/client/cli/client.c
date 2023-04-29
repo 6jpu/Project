@@ -49,7 +49,7 @@ int main(int argc,char **argv)
     int                   set_time = 3;      //设置上报时间间隔，默认为三秒
     char                  hostname[32] = "127.0.0.1";		//默认IP
     char                  db_name[32] = "temp_data.db";
-	socket_t              sock;
+    socket_t              sock;
     packet_t              pack;
  
 
@@ -81,19 +81,19 @@ int main(int argc,char **argv)
                 return 0;
             default:
                 print_usage(argv[0]);
-				return 0;
+                return 0;
         }
     }
 
     if ( (socket_init(&sock, hostname, port)) < 0)
     {
         PARSE_LOG_ERROR("socket initialization failure.\n");
-		return -1;
+        return -1;
     }
-	if ( (socket_connect(&sock)) < 0 )
-	{
+    if ( (socket_connect(&sock)) < 0 )
+    {
         PARSE_LOG_WARN("socket connect failure.\n");
-	}
+    }
 
 
     /* 创建数据库表格 */
@@ -106,87 +106,85 @@ int main(int argc,char **argv)
 
     while (1)
     {
-		sample_flag = 0;
+        sample_flag = 0;
 
-		/* 判断是否到了采样时间 */
+        /* 判断是否到了采样时间 */
         current_time = time(NULL);
         if ( current_time-pretime > set_time-1 )
         {
             /* 采样 */
             if( sample_temperature( &pack ) < 0 )
-			{
-				PARSE_LOG_ERROR("Failed sample data\n");
-				return -3;
-			}
-			sample_flag = 1;
-			pretime = current_time;
+            {
+                PARSE_LOG_ERROR("Failed sample data\n");
+                return -3;
+            }
+            sample_flag = 1;
+            pretime = current_time;
         }
 
-		/* 判断socket连接，若未连上则连接 */
-		if ( socket_diag( &sock ) < 0 )
-		{
-			PARSE_LOG_WARN("Socket diagnose failure\n");
-		}
+     	/* 判断socket连接，若未连上则连接 */
+    	if ( socket_diag( &sock ) < 0 )
+    	{
+            PARSE_LOG_WARN("Socket diagnose failure\n");
+    	}
 
-		if ( !sock.connected )
-		{
-			if ( (socket_connect(&sock)) < 0 )
-			{
-				PARSE_LOG_WARN("socket connect failure.\n");
-			}
-		}
+    	if ( !sock.connected )
+    	{
+            if ( (socket_connect(&sock)) < 0 )
+            {
+            	PARSE_LOG_WARN("socket connect failure.\n");
+            }
+        }
 
-        
-		/* 如果还是断开连接就存入数据库 */
-		if ( !sock.connected )
-		{
-			if ( sample_flag )
-			{
-				if ( db_insert( pack ) < 0 )
-				{
-					PARSE_LOG_ERROR("Insert data into database failure\n");
-					return -5;
-				}
-			        printf ("sizeof:%ld\n",sizeof(pack));
-			}
 
-			continue;
-		}
+    	/* 如果还是断开连接就存入数据库 */
+    	if ( !sock.connected )
+    	{
+            if ( sample_flag )
+            {
+                if ( db_insert( pack ) < 0 )
+                {
+                    PARSE_LOG_ERROR("Insert data into database failure\n");
+                    return -5;
+                }
+            }
 
-		/* 下面为socket 连接上的情况: */
-		/* 1.如果有采样就发送采样数据 */
-		if ( sample_flag )
-		{
-			pack_data( &pack, msg_str, sizeof(msg_str));
-			if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
-			{
-				if ( db_insert( pack ) < 0 )
-				{
-					PARSE_LOG_ERROR("Insert data into database failure\n");
-					return -5;
-				}
-				socket_close( &sock );
+            continue;
+        }
 
-			}
-		}
+     	/* 下面为socket 连接上的情况: */
+    	/* 1.如果有采样就发送采样数据 */
+    	if ( sample_flag )
+    	{
+            pack_data( &pack, msg_str, sizeof(msg_str));
+            if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
+            {
+                if ( db_insert( pack ) < 0 )
+                {
+                    PARSE_LOG_ERROR("Insert data into database failure\n");
+                    return -5;
+                } 
+                socket_close( &sock );
+            }
+        }
 
-		/* 2.如果数据库中有数据就发送数据库中数据 */
-		memset( msg_str, 0, sizeof(msg_str));
-		if ( db_select( msg_str ) == 0 )
-		{
-			printf ("msg_str:%s\n",msg_str);
-			if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
-			{
-				socket_close(&sock);
-			}
-			else
-			{
-				if ( db_delete() < 0 )
-				{
-					return -6;
-				}
-			}
-		}
+        /* 2.如果数据库中有数据就发送数据库中数据 */
+        memset( msg_str, 0, sizeof(msg_str));
+        if ( db_select( msg_str ) == 0 )
+        {
+             printf ("msg_str:%s\n",msg_str);
+             if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
+             {
+                 socket_close(&sock);
+             }
+             else
+             {
+                 if ( db_delete() < 0 )
+                 {
+                     return -6;
+                 }
+             }
+        }
 	}
 
 	db_close();
