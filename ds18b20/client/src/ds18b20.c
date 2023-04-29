@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <dirent.h>
+#include "ds18b20.h"
 #include "logger.h"
 
 

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
 #include <stdlib.h>
 #include <getopt.h>
 #include "mysqlite.h"
@@ -37,19 +38,19 @@ void print_usage(char *proname)
 int main(int argc,char **argv)
 {
     int                   ch;
-    int                   model = 1;         //model为0则未到上报时间，为1则已到上报时间
-    time_t                current_timer;     //当前时间戳
-    time_t                report_timer;      //采样时间戳
-    long                  sleep_timer;
-    myData                data;
+    int                   sample_flag;       //sample_flag为0为未采样，为1则已采样
+    time_t                current_time;      //当前时间戳
+    time_t                pretime = 0;       //上次采样时间戳
     int                   sockfd = -1;
     int                   rv = -1;
-    int                   port = 6666;		//默认端口
-    char                  msg_str[1024];
-    char                  buf[1024];
+    int                   port = 6666;		 //默认端口
+    char                  msg_str[64];
+    char                  buf[256];
     int                   set_time = 3;      //设置上报时间间隔，默认为三秒
-    char                  hostname[] = "127.0.0.1";		//默认IP
-    char                 *report_time;     //上报数据时间
+    char                  hostname[32] = "127.0.0.1";		//默认IP
+    char                  db_name[32] = "temp_data.db";
+	socket_t              sock;
+    packet_t              pack;
  
 
     struct option         opts[] = 
@@ -67,7 +68,7 @@ int main(int argc,char **argv)
         switch (ch)
         {
             case 'h':
-                hostname=optarg;
+                strcpy(hostname,optarg);
                 break;
             case 'p':
                 port=atoi(optarg);
@@ -80,208 +81,116 @@ int main(int argc,char **argv)
                 return 0;
             default:
                 print_usage(argv[0]);
+				return 0;
         }
     }
 
-    if ( (sockfd=socket_init(hostname,port)) < 0)
+    if ( (socket_init(&sock, hostname, port)) < 0)
     {
-        PARSE_LOG_WARN("socket failure.\n");
+        PARSE_LOG_ERROR("socket initialization failure.\n");
+		return -1;
     }
+	if ( (socket_connect(&sock)) < 0 )
+	{
+        PARSE_LOG_WARN("socket connect failure.\n");
+	}
 
 
     /* 创建数据库表格 */
-    if ( sqlite_init() < 0)
+    if (  db_init( db_name ) < 0)
     {   
         PARSE_LOG_ERROR("Failed initial database\n");
-        return -3; 
-    }
-
-
-    while (1)
-    {                       
-
-Report:     
-        /* 获取上报时间 */
-        report_timer = time(NULL); 
-        get_time(data.report_time);
-
-        current_timer = time(NULL);
-        sleep_timer = current_timer-report_timer;
-        if ( sleep_timer < set_time )
-        {
-            /* model为0则未到上报时间，为1则已到上报时间 */
-            model = 0;
-        }
-
-        if ( model == 0 )
-        {
-            /* 如果还没到上报时间则先发送数据库里的内容 */
-            memset(msg_str,0,sizeof(msg_str));
-            while ( sqlite_select(msg_str) == 0 )
-            {
-                /* 上报客户端 */
-                rv=write(sockfd, msg_str, strlen(msg_str));
-                if ( rv < 0 ) 
-                {   
-                    /* 上报数据失败则存入数据库 */
-                    PARSE_LOG_WARN("Write to Server by sockfd[%d] failure : %s\n", 
-                            sockfd, strerror(errno));
-                    close(sockfd);
-                    goto DB;
-
-                }    
-
-                memset(buf, 0, sizeof(buf));
-                rv=read(sockfd, buf, sizeof(buf));
-                if (rv < 0)
-                {   
-                    /* 未收到确认回复则存入数据库 */
-                    PARSE_LOG_WARN("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
-                            strerror(errno));
-                    close(sockfd);
-                    goto DB;
-
-                }   
-                else if (rv == 0)
-                {   
-                    /* 服务器断开则存入数据库 */
-                    PARSE_LOG_WARN("Scoket [%d] get disconnected\n", sockfd);
-                    close(sockfd);
-                    goto DB;
-                }   
-                else if(rv > 0)
-                {   
-                    PARSE_LOG_INFO("Read %d bytes data from Server : %s\n", rv, buf);
-                }    
-
-
-                /* 从数据库中删除已发送的数据 */
-                if ( sqlite_delete() < 0 )
-                {
-                    PARSE_LOG_ERROR("Delete data from database failure\n");
-                    return -3;
-                }
-            }
-        }
-
-
-
-        current_timer = time(NULL);
-        sleep_timer = current_timer-report_timer;
-        if ( sleep_timer < set_time )
-        {
-            sleep( set_time-sleep_timer );
-            model = 1;
-        }
-        else
-        {
-            model = 1;
-        }
-
-        if ( model == 1)
-        {
-            /* 如果到上报时间则先采样上报数据 */ 
-            /* 获取上报温度 */
-            if ( get_temperature(&data.temp) < 0 )
-            {
-                PARSE_LOG_ERROR("get temperature failure.\n");
-                return -2;
-            }
-            /* 获取上报产品序列号 */
-            if ( get_sn(data.sn) < 0)
-            {
-                PARSE_LOG_ERROR("get sn failure.\n");
-                return -2;
-            }
-            /* 生成字符串 */    
-            memset(msg_str, 0, sizeof(msg_str));
-            snprintf(msg_str, sizeof(msg_str), "%s,%f,%s\n", data.report_time, data.temp, data.sn);
-            PARSE_LOG_DEBUG("msg_str:%s\n", msg_str);
-            /* 上报客户端 */
-            rv=write(sockfd, msg_str, strlen(msg_str));
-            if ( rv < 0 ) 
-            {   
-                /* 上报数据失败则存入数据库 */
-                PARSE_LOG_WARN("Write to Server by sockfd[%d] failure : %s\n", sockfd, strerror(errno));
-                close(sockfd);
-                break;
-
-            }       
-
-            memset(buf, 0, sizeof(buf));
-            rv=read(sockfd, buf, sizeof(buf));
-            if (rv < 0)
-            {
-                /* 未收到确认回复则存入数据库 */
-                PARSE_LOG_WARN("Read from Server by sockfd[%d] failure : %s\n",sockfd, 
-                        strerror(errno));
-                close(sockfd);
-                break;
-
-            }
-            else if (rv == 0)
-            {
-                /* 服务器断开则存入数据库 */
-                PARSE_LOG_WARN("Scoket [%d] get disconnected\n", sockfd);
-                close(sockfd);
-                break;
-            }
-            else if (rv > 0)
-            {
-                PARSE_LOG_INFO("Read %d bytes data from Server : %s\n", rv, buf);
-            }
-
-        }
-
+        return -2; 
     }
 
 
     while (1)
     {
-DB:         /* 存入数据库 */    
-        if ( sqlite_insert(data) < 0)
-        {   
-            PARSE_LOG_ERROR("Failed to save data into database\n");
-            return -3; 
-        }   
+		sample_flag = 0;
 
-
-        /* 尝试重新连接服务器 */
-        if ( (sockfd=socket_init(hostname,port)) >= 0)
+		/* 判断是否到了采样时间 */
+        current_time = time(NULL);
+        if ( current_time-pretime > set_time-1 )
         {
-            PARSE_LOG_INFO("socket reconnect successfully.\n");
-            goto Report;
+            /* 采样 */
+            if( sample_temperature( &pack ) < 0 )
+			{
+				PARSE_LOG_ERROR("Failed sample data\n");
+				return -3;
+			}
+			sample_flag = 1;
+			pretime = current_time;
         }
 
-        current_timer = time(NULL);
-        sleep_timer = current_timer-report_timer;
-        if ( sleep_timer < set_time )
-        {
-            sleep( set_time-sleep_timer );
-        }
+		/* 判断socket连接，若未连上则连接 */
+		if ( socket_diag( &sock ) < 0 )
+		{
+			PARSE_LOG_WARN("Socket diagnose failure\n");
+		}
 
-        /* 重新连接失败则继续存入数据库 */
-        /* 获取上报温度 */
-        if ( get_temperature(&data.temp) < 0 )
-        {
-            PARSE_LOG_ERROR("get temperature failure.\n");
-            return -2;
-        }
-        /* 获取上报产品序列号 */
-        if ( get_sn(data.sn) < 0)
-        {
-            PARSE_LOG_ERROR("get sn failure.\n");
-            return -2;
-        }
-        /* 获取上报时间 */
-        report_timer = time(NULL);
-        get_time(data.report_time);
+		if ( !sock.connected )
+		{
+			if ( (socket_connect(&sock)) < 0 )
+			{
+				PARSE_LOG_WARN("socket connect failure.\n");
+			}
+		}
 
+        
+		/* 如果还是断开连接就存入数据库 */
+		if ( !sock.connected )
+		{
+			if ( sample_flag )
+			{
+				if ( db_insert( pack ) < 0 )
+				{
+					PARSE_LOG_ERROR("Insert data into database failure\n");
+					return -5;
+				}
+			        printf ("sizeof:%ld\n",sizeof(pack));
+			}
 
-    }
+			continue;
+		}
 
+		/* 下面为socket 连接上的情况: */
+		/* 1.如果有采样就发送采样数据 */
+		if ( sample_flag )
+		{
+			pack_data( &pack, msg_str, sizeof(msg_str));
+			if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
+			{
+				if ( db_insert( pack ) < 0 )
+				{
+					PARSE_LOG_ERROR("Insert data into database failure\n");
+					return -5;
+				}
+				socket_close( &sock );
 
-    return 0;
+			}
+		}
+
+		/* 2.如果数据库中有数据就发送数据库中数据 */
+		memset( msg_str, 0, sizeof(msg_str));
+		if ( db_select( msg_str ) == 0 )
+		{
+			printf ("msg_str:%s\n",msg_str);
+			if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
+			{
+				socket_close(&sock);
+			}
+			else
+			{
+				if ( db_delete() < 0 )
+				{
+					return -6;
+				}
+			}
+		}
+	}
+
+	db_close();
+
+	return 0;
+
 }
-
-
