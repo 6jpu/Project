@@ -2,9 +2,11 @@
 *.dv
 *.db
 
-#test file
+#tool file
 *.sh
 test.c
+tags
+sqlite.*
 
 #log
 Log/
@@ -17,4 +19,4 @@ Log/
 a.out
 client
 server
-
+cscope*
