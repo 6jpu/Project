@@ -17,6 +17,6 @@ Log/
 
 #bin
 a.out
-Client
-Server
+clientapp
+serverapp
 cscope*
