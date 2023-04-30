@@ -50,24 +50,25 @@ void set_socket_rlimit(void);
 
 int main(int argc, char **argv)
 {
-	int                   listenfd,connfd;
-	int                   serv_port = 0;
-	int                   daemon_run = 0;
-	int                   ch;
 	int                   i;
 	int                   j;
+	int                   ch;
 	int                   t = 0;
 	int                   rv;
-	int                   found;
 	int                   max;
+	int                   found;
+	int                   listenfd;
+	int                   connfd;
+	int                   epollfd;
+	int                   events;  //发生了的事件
+	int                   serv_port = 0;
+	int                   daemon_run = 0;
 	char                  msg_str[64];
 	char                  buf[1024];
+	char                  db_name[32] = "temp_data.db";
 	packet_t              pack;
-	int                   epollfd;
 	struct epoll_event    event;
 	struct epoll_event    event_array[MAX_EVENTS];
-	int                   events;  //发生了的事件
-	char                  db_name[32] = "temp_data.db";
 	char                 *progname = NULL;
 	char                 *p = NULL;
 	char                 *buf_data[3];	//定义指针数组存放解析出来的数据                           
