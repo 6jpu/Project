@@ -1,13 +1,13 @@
 /*********************************************************************************
- *      Copyright:  (C) 2023 Kun_<1433729173@qq.com>
- *                  All rights reserved.
+ *      Copyright:     (C) 2023 Kun_<1433729173@qq.com>
+ *                     All rights reserved.
  *
- *       Filename:  test.c
- *    Description:  This file ds18b20 get temperature and sn
+ *       Filename:     ds18b20.c
+ *       Description:  This file ds18b20 get temperature 
  *                 
- *        Version:  2.0.0(2023年04月20日)
- *         Author:  Kun_ <1433729173@qq.com>
- *      ChangeLog:  1, Release initial version on "2023年04月10日 17时25分12秒"
+ *       Version:      2.0.0(2023年04月30日)
+ *       Author:       Kun_ <1433729173@qq.com>
+ *       ChangeLog:    1, Release initial version on "2023年04月10日 17时25分12秒"
  *                 
  ********************************************************************************/
 #include <stdio.h>
@@ -27,13 +27,13 @@ int get_temperature(float *temp)
 {
 	int            fd = -1;
 	char           buf[128];
-	char          *ptr = NULL;
-	DIR           *dirp = NULL;
-	struct dirent *direntp = NULL;
-  //char           w1_path[64] = "/sys/bus/w1/devices/";
+	//char           w1_path[64] = "/sys/bus/w1/devices/";
 	char           w1_path[64] = "/home/luofangheng/git/Project/";
 	char           chip_sn[32];
 	int            found = 0;
+	char          *ptr = NULL;
+	DIR           *dirp = NULL;
+	struct dirent *direntp = NULL;
 
 
 	dirp  = opendir(w1_path);
@@ -58,7 +58,7 @@ int get_temperature(float *temp)
 
 	closedir(dirp);
 
-    strncat(w1_path, chip_sn, sizeof(w1_path)-strlen(w1_path));
+	strncat(w1_path, chip_sn, sizeof(w1_path)-strlen(w1_path));
 	strncat(w1_path, "/w1_slave", sizeof(w1_path)-strlen(w1_path));
 
 	fd=open(w1_path, O_RDONLY);
@@ -88,7 +88,7 @@ int get_temperature(float *temp)
 
 	close(fd);
 
-    return 0;	
+	return 0;	
 
 }
 

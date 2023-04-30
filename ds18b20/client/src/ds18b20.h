@@ -1,13 +1,13 @@
 /*********************************************************************************
- *      Copyright:  (C) 2023 Kun_<1433729173@qq.com>
- *                  All rights reserved.
+ *      Copyright:    (C) 2023 Kun_<1433729173@qq.com>
+ *                    All rights reserved.
  *
- *       Filename:  test.c
- *    Description:  This file is head file for ds18b20.c
+ *      Filename:     ds18b20.h
+ *      Description:  This ds18b20 head file
  *                 
- *        Version:  1.0.0(2023年04月18日)
- *         Author:  Kun_ <1433729173@qq.com>
- *      ChangeLog:  1, Release initial version on "2023年04月10日 17时25分12秒"
+ *      Version:      2.0.0(2023年04月30日)
+ *      Author:       Kun_ <1433729173@qq.com>
+ *      ChangeLog:    1, Release initial version on "2023年04月10日 17时25分12秒"
  *                 
  ********************************************************************************/
 #ifndef  _DS18B20_H_

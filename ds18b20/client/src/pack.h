@@ -18,9 +18,9 @@
 
 typedef struct packet_s
 {
-    float temp; /*  temperature */
-    char  time[32]; /*  date/time: YYYY-MM-DD hh:mm:ss */
-    char  devsn[DEVSN_LEN+1]; /*  SN format: RPI2304001 */
+	float temp; /*  temperature */
+	char  time[32]; /*  date/time: YYYY-MM-DD hh:mm:ss */
+	char  devsn[DEVSN_LEN+1]; /*  SN format: RPI2304001 */
 } packet_t; 
 
 

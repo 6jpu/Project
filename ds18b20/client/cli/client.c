@@ -5,7 +5,7 @@
  *       Filename:  client.c
  *       Description:  This file socket client
  *                 
- *       Version:  2.0.0(2023年04月20日)
+ *       Version:  2.0.0(2023年04月30日)
  *       Author:  Kun_ <1433729173@qq.com>
  *       ChangeLog:  1, Release initial version on "2023年04月07日 17时00分57秒"
  *                 
@@ -43,7 +43,7 @@ int main(int argc,char **argv)
     time_t                pretime = 0;       //上次采样时间戳
     int                   sockfd = -1;
     int                   rv = -1;
-    int                   port = 6666;		 //默认端口
+    int                   port = 6666;       //默认端口
     char                  msg_str[64];
     char                  buf[256];
     int                   set_time = 3;      //设置上报时间间隔，默认为三秒
@@ -157,7 +157,7 @@ int main(int argc,char **argv)
     	if ( sample_flag )
     	{
             pack_data( &pack, msg_str, sizeof(msg_str));
-            if ( socket_write( &sock, msg_str, sizeof(msg_str)) < 0 )
+            if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
             {
                 if ( db_insert( pack ) < 0 )
                 {
@@ -172,7 +172,7 @@ int main(int argc,char **argv)
         memset( msg_str, 0, sizeof(msg_str));
         if ( db_select( msg_str ) == 0 )
         {
-             printf ("msg_str:%s\n",msg_str);
+             PARSE_LOG_DEBUG("msg_str:%s\n",msg_str);
              if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
              {
                  socket_close(&sock);
