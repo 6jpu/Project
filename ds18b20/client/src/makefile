@@ -1,8 +1,8 @@
 LIBNAME1=ds18b20
-LIBNAME2=get_time
-LIBNAME3=sqlite
+LIBNAME2=socket
+LIBNAME3=mysqlite
 LIBNAME4=logger
-APPNAME=client
+LIBNAME5=pack
 INSTPATH=`pwd`/../lib/
 
 CC=gcc
@@ -18,6 +18,7 @@ static_lib:
 	${AR} -rcs lib${LIBNAME2}.a ${LIBNAME2}.o
 	${AR} -rcs lib${LIBNAME3}.a ${LIBNAME3}.o
 	${AR} -rcs lib${LIBNAME4}.a ${LIBNAME4}.o
+	${AR} -rcs lib${LIBNAME5}.a ${LIBNAME5}.o
 
 install:
 	cp -rf lib*.a ${INSTPATH}

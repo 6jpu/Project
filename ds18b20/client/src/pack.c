@@ -15,7 +15,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "logger.h"
-#include "ds18b20.h"
 #include "pack.h"
 
 
