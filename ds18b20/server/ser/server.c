@@ -54,7 +54,9 @@ int main(int argc, char **argv)
 	int                   serv_port = 0;
 	int                   daemon_run = 0;
 	int                   ch;
-	int                   i,j;
+	int                   i;
+	int                   j;
+	int                   t = 0;
 	int                   rv;
 	int                   found;
 	int                   max;
@@ -67,6 +69,7 @@ int main(int argc, char **argv)
 	int                   events;  //发生了的事件
 	char                  db_name[32] = "temp_data.db";
 	char                 *progname = NULL;
+	char                 *p = NULL;
 	char                 *buf_data[3];	//定义指针数组存放解析出来的数据                           
 
 	struct option         long_options[] = 
@@ -208,8 +211,8 @@ int main(int argc, char **argv)
 					p = strtok(buf, ",");
 					while(p)
 					{
-					buf_data[t]=p;
-					t=t+1;
+					buf_data[t] = p;
+					t = t+1;
 					p = strtok(NULL, ",");
 					}
 					

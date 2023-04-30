@@ -19,7 +19,7 @@ extern "C"
 #endif
 
 // 日志路径
-#define LOG_PATH       "./Log/"
+#define LOG_PATH              "./Log/"
 #define LOG_ERROR             "log.error"
 #define LOG_WARN              "log.warn"
 #define LOG_INFO              "log.info"

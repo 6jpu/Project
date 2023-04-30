@@ -1,7 +1,7 @@
-LIBNAME1=sqlite
+LIBNAME1=mysqlite
 LIBNAME2=logger
 LIBPATH=`pwd`/../lib/
-APPNAME=server
+APPNAME=serverapp
 CFLAGS+=-I${LIBPATH}
 LDFLAGS+=-L${LIBPATH}
 LDFLAGS+=-l${LIBNAME1}
@@ -11,7 +11,7 @@ CC=gcc
 AR=ar
 
 all:  
-	${CC} ${CFLAGS} ${APPNAME}.c -o ${APPNAME} ${LDFLAGS} -l sqlite3
+	${CC} ${CFLAGS} server.c -o ${APPNAME} ${LDFLAGS} -l sqlite3
 
 	 
 clean:

@@ -1,6 +1,5 @@
-LIBNAME1=sqlite
+LIBNAME1=mysqlite
 LIBNAME2=logger
-APPNAME=server
 INSTPATH=`pwd`/../lib/
 
 CC=gcc
