@@ -19,12 +19,12 @@
 ~ds18b20/client$ make distclean`
 
 ##### 服务器：
-
-`/* 安装 */    
+```c
+/* 安装 */    
 ~ds18b20/server$ make     
 /* 卸载，清除可执行文件和目标文件 */   
-~ds18b20/server$ make distclean`
-
+~ds18b20/server$ make distclean
+```
 ### 使用说明
 
 使用本程序之前需在ds18b20/client/cli和ds18b20/servert/ser下新建 Log 文件夹以存放日志信息
