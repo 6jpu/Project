@@ -10,7 +10,7 @@
 
 ### 安装教程
 ##### 客户端：
-//安装：
+//安装：  
 ~ds18b20/client$ make  
 //卸载，清除可执行文件和目标文件：
 ~ds18b20/client$ make distclean
