@@ -26,11 +26,11 @@
 int get_temperature(float *temp)
 {
 	int            fd = -1;
-	char           buf[128];
+	int            found = 0;
 	//char           w1_path[64] = "/sys/bus/w1/devices/";
 	char           w1_path[64] = "/home/luofangheng/git/Project/";
 	char           chip_sn[32];
-	int            found = 0;
+	char           buf[128];
 	char          *ptr = NULL;
 	DIR           *dirp = NULL;
 	struct dirent *direntp = NULL;
