@@ -12,12 +12,12 @@
 ### 安装教程
 
 ##### 客户端：
-
-`/* 安装 */    
+```c
+/* 安装 */    
 ~ds18b20/client$ make    
 /* 卸载，清除可执行文件和目标文件 */    
 ~ds18b20/client$ make distclean`
-
+```
 ##### 服务器：
 ```c
 /* 安装 */    
@@ -30,21 +30,21 @@
 使用本程序之前需在ds18b20/client/cli和ds18b20/servert/ser下新建 Log 文件夹以存放日志信息
 
 ##### 客户端：
-
-`~ds18b20/client$ cd cli    
+```c
+~ds18b20/client$ cd cli    
 ~ds18b20/client/cli$ mkdir Log    
 /* -h 指定服务器IP  -p 指定服务器端口  -t 指定采样时间间隔  */      
 ~ds18b20/client/cli$ ./clientapp -h 192.168.0.1 -p 6666 -t 30    
 /* 或者使用默认IP 127.0.0.1  默认端口 6666  默认采样时间间隔 3s */      
 ~ds18b20/client/cli$ ./clientapp`
-
+```
 
 ##### 服务器：
-
-`~ds18b20/servert$ cd ser    
+```c
+~ds18b20/servert$ cd ser    
 ~ds18b20/servert/ser$ mkdir Log      
 ~ds18b20/servert/ser$ ./serverapp -p 6666`   
-
+```
 ### 参与贡献
 
 1.  Fork 本仓库
