@@ -39,18 +39,18 @@ int main(int argc,char **argv)
 {
     int                   ch;
     int                   sample_flag;       //sample_flag为0为未采样，为1则已采样
-    time_t                current_time;      //当前时间戳
-    time_t                pretime = 0;       //上次采样时间戳
     int                   sockfd = -1;
     int                   rv = -1;
     int                   port = 6666;       //默认端口
+    int                   set_time = 3;      //设置上报时间间隔，默认为三秒
     char                  msg_str[64];
     char                  buf[256];
-    int                   set_time = 3;      //设置上报时间间隔，默认为三秒
     char                  hostname[32] = "127.0.0.1";		//默认IP
     char                  db_name[32] = "temp_data.db";
     socket_t              sock;
     packet_t              pack;
+    time_t                current_time;      //当前时间戳
+    time_t                pretime = 0;       //上次采样时间戳
  
 
     struct option         opts[] = 
