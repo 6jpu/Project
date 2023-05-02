@@ -110,7 +110,7 @@ int main(int argc,char **argv)
 
         /* 判断是否到了采样时间 */
         current_time = time(NULL);
-        if ( current_time-pretime > set_time-1 )
+        if ( current_time-pretime >= set_time )
         {
             /* 采样 */
             if( sample_temperature( &pack ) < 0 )
