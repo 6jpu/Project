@@ -25,6 +25,7 @@
 
 int get_temperature(float *temp)
 {
+	int            rv = 0;
 	int            fd = -1;
 	int            found = 0;
 	char           w1_path[64] = "/sys/bus/w1/devices/";
@@ -40,7 +41,8 @@ int get_temperature(float *temp)
 	if ( !dirp )
 	{
 		PARSE_LOG_ERROR("open folder %s failure: %s\n", w1_path, strerror(errno));
-		return -1;
+		rv = -1;
+		goto CleanUp;
 	}
 	while ( NULL != (direntp=readdir(dirp)))
 	{
@@ -53,7 +55,8 @@ int get_temperature(float *temp)
 	if ( !found )
 	{
 		PARSE_LOG_ERROR("Can not find ds18b20 chipset\n");
-		return -2;
+		rv = -2;
+		goto CleanUp;
 	}
 
 	closedir(dirp);
@@ -66,29 +69,32 @@ int get_temperature(float *temp)
 	{
 		PARSE_LOG_ERROR("open file failure: %s\n", strerror(errno));
 		//perror("open file failure");
-		return -3;
+		rv = -3;
+		goto CleanUp;
 	}
 	memset(buf, 0, sizeof(buf));	
 	if ( read(fd, buf, sizeof(buf)) < 0)
 	{
 		PARSE_LOG_ERROR("read data from fd=%d failure: %s\n", fd, strerror(errno));
-		return -4;
+		rv = -4;
+		goto CleanUp;
 	}
 
 	ptr=strstr(buf, "t=");
 	if ( !ptr )
 	{
 		PARSE_LOG_ERROR("Can not find t= string");
-		return -5;
+		rv = -5;
+		goto CleanUp; 
 	}
 
 	ptr +=2;
 
 	*temp= atof(ptr)/1000;
 
+CleanUp:
 	close(fd);
-
-	return 0;	
+	return rv;	
 
 }
 
