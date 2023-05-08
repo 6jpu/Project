@@ -38,14 +38,14 @@ int db_init(char *db_name);
 int db_insert(packet_t pack);
 
 /* 
- * 函数介绍：自动选择表中最后一行数据存入传入参数数组并打印
+ * 函数介绍：自动选择表中第一行数据存入传入参数数组并打印
  * 输出参数：选择数据存入str中
  * 返回值：正常退出返回0，出错返回负数
  */
-int db_select(char *str);
+int db_select(char *str, int *bytes);
 
 /*
- * 函数介绍：自动选择表中最后一行数据删除
+ * 函数介绍：自动选择表中第一行数据删除
  * 返回值：正常退出返回0，出错返回负数
  */
 int db_delete(void);

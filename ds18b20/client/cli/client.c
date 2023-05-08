@@ -38,7 +38,8 @@ void print_usage(char *proname)
 int main(int argc,char **argv)
 {
     int                   ch;
-    int                   sample_flag;       //sample_flag为0为未采样，为1则已采样
+	int                   msg_str_bytes;
+	int                   sample_flag;       //sample_flag为0为未采样，为1则已采样
     int                   sockfd = -1;
     int                   rv = -1;
     int                   port = 6666;       //默认端口
@@ -90,10 +91,6 @@ int main(int argc,char **argv)
         PARSE_LOG_ERROR("socket initialization failure.\n");
         return -1;
     }
-    if ( (socket_connect(&sock)) < 0 )
-    {
-        PARSE_LOG_WARN("socket connect failure.\n");
-    }
 
 
     /* 创建数据库表格 */
@@ -136,7 +133,6 @@ int main(int argc,char **argv)
             }
         }
 
-
     	/* 如果还是断开连接就存入数据库 */
     	if ( !sock.connected )
     	{
@@ -170,9 +166,9 @@ int main(int argc,char **argv)
 
         /* 2.如果数据库中有数据就发送数据库中数据 */
         memset( msg_str, 0, sizeof(msg_str));
-        if ( db_select( msg_str ) == 0 )
+        if ( !db_select(msg_str, &msg_str_bytes) )
         {
-             PARSE_LOG_DEBUG("msg_str:%s\n",msg_str);
+             PARSE_LOG_DEBUG("select %d bytes msg_str from DB:%s\n",msg_str_bytes, msg_str);
              if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
              {
                  socket_close(&sock);

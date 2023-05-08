@@ -17,7 +17,7 @@
 typedef struct socket_s
 {
      int   fd;
-     char *host;  /*  socket server host name or IP address */
+     char  host[64];  /*  socket server host name or IP address */
      int   port;      /*  socket server listen port */
      int   connected; /*  socket connect status, 0:Disconnected,1:Connected */
 } socket_t;

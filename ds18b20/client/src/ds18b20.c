@@ -28,8 +28,8 @@ int get_temperature(float *temp)
 	int            rv = 0;
 	int            fd = -1;
 	int            found = 0;
-	char           w1_path[64] = "/sys/bus/w1/devices/";
-//	char           w1_path[64] = "/home/luofangheng/git/Project/";
+//	char           w1_path[64] = "/sys/bus/w1/devices/";
+	char           w1_path[64] = "/home/luofangheng/git/Project/";
 	char           chip_sn[32];
 	char           buf[128];
 	char          *ptr = NULL;

@@ -22,6 +22,9 @@ all:
 	 
 clean:
 	rm -rf ${APPNAME}
+	rm -rf *.db
+	rm -rf *.dv
+	rm -rf Log/*
 
 distclean: clean
 

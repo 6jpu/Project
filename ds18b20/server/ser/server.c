@@ -61,6 +61,7 @@ int main(int argc, char **argv)
 	int                   listenfd;
 	int                   connfd;
 	int                   epollfd;
+	int                   msg_str_bytes;
 	int                   events;  //发生了的事件
 	int                   serv_port = 0;
 	int                   daemon_run = 0;
@@ -239,7 +240,7 @@ int main(int argc, char **argv)
 					}
 
 					/* 查看存入数据库的数据 */
-					db_select( msg_str );
+					db_select(msg_str, &msg_str_bytes);
 					PARSE_LOG_DEBUG("msg_str in DB:%s\n",msg_str);
 
 				}
