@@ -6,7 +6,7 @@
 *.sh
 test.c
 tags
-sqlite.*
+install/
 
 #log
 Log/

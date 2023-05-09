@@ -57,10 +57,10 @@ int db_insert(packet_t pack)
 	packet_t data_in = pack; // 准备要写入的值
 	strcpy(table_name, data_in.devsn);
 
-
+    PARSE_LOG_ERROR("%s",table_name);
 	/* Create table by devsn if not exists */
 	/* Create SQL statement */
-	sql=sqlite3_mprintf("CREATE TABLE IF NOT EXISTS %s( Data BLOB);",table_name);
+	sql=sqlite3_mprintf("CREATE TABLE IF NOT EXISTS %s (Data BLOB);",table_name);
 
 	/* Execute SQL statement */
 	rv = sqlite3_exec(s_db, sql, 0, 0, &zErrMsg);

@@ -157,6 +157,7 @@ int main(int argc,char **argv)
     	/* 1.如果有采样就发送采样数据 */
     	if ( sample_flag )
     	{
+			memset( msg_str, 0, sizeof(msg_str));
             pack_data( &pack, msg_str, sizeof(msg_str));
             if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
             {
@@ -173,8 +174,8 @@ int main(int argc,char **argv)
         memset( msg_str, 0, sizeof(msg_str));
         if ( !db_select(msg_str, &msg_str_bytes) )
         {
-             PARSE_LOG_DEBUG("select %d bytes msg_str from DB:%s\n",msg_str_bytes, msg_str);
-             if ( socket_write( &sock, msg_str, strlen(msg_str)) < 0 )
+             PARSE_LOG_DEBUG("select %d bytes msg_str from DB:%s",msg_str_bytes, msg_str);
+             if ( socket_write( &sock, msg_str, msg_str_bytes ) < 0 )
              {
                  socket_close(&sock);
              }

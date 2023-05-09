@@ -12,13 +12,13 @@ AR=ar
 
 all:  
 	${CC} ${CFLAGS} server.c -o ${APPNAME} ${LDFLAGS} -l sqlite3
-
-	 
+	mkdir Log
+ 
 clean:
 	rm -rf ${APPNAME}
 	rm -rf *.db
 	rm -rf *.dv
-	rm -rf Log/*
+	rm -rf Log/
 
 distclean: clean
 

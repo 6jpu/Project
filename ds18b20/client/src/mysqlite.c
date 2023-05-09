@@ -130,7 +130,7 @@ int db_select(char *str ,int *bytes)
 	sqlite3_finalize(pStmt);   
 	
 
-	sql=sqlite3_mprintf("SELECT Data from %s limit 0,1;", table_name);
+	sql=sqlite3_mprintf("SELECT Data from %s limit 1;", table_name);
 
 	/* Execute SQL statement */
 	rv = sqlite3_prepare_v2(s_db, sql, -1, &pStmt, NULL);
@@ -148,8 +148,8 @@ int db_select(char *str ,int *bytes)
 	packet_t *pData = ( packet_t*)sqlite3_column_blob(pStmt, 0);
     *bytes = sqlite3_column_bytes(pStmt, 0);
 
-	sprintf(str, "%s,%f,%s", pData->time, pData->temp, pData->devsn);
-	PARSE_LOG_DEBUG("%s\n",str);
+	sprintf(str, "%s,%f,%s\n", pData->time, pData->temp, pData->devsn);
+	PARSE_LOG_DEBUG("%s",str);
 	rv = 0;
 
 OUT:	
