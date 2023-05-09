@@ -20,6 +20,15 @@
 #include <sys/stat.h>   // stat 头文件
 #include "logger.h"
 
+static int     g_loglevel;
+
+int logger_init( int loglevel )
+{ 
+    g_loglevel = loglevel>LOG_LEVEL_MAX ? LOG_LEVEL_MAX : loglevel;
+ 
+    return 0;
+}
+
 static LOG_FILE_S gstLogFile[5] = 
 {
     {"", ""},
@@ -45,15 +54,8 @@ static LOG_FILE_S gstLogFile[5] =
     }, 
 };
 
-static void __Run_Log
-(
-    LOG_LEVEL_E enLogLevel,
-    const char *pcFileName,
-    const char *pcFuncName,
-    int         iFileLine,
-    const char *format,
-    va_list     vargs
-)
+static void __Run_Log(LOG_LEVEL_E enLogLevel, const char *pcFileName, 
+		const char *pcFuncName, int iFileLine, const char *format, va_list vargs)
 {
     FILE *logfile = NULL;
     logfile = fopen(gstLogFile[enLogLevel].szCurLog, "a");
@@ -71,15 +73,8 @@ static void __Run_Log
 
     char buf[768];
     snprintf(buf, 768, "%.2d-%.2d %.2d:%.2d:%.2d.%.3lu [%s][%s:%d] ",
-                                            stTime.tm_mon + 1,
-                                            stTime.tm_mday,
-                                            stTime.tm_hour,
-                                            stTime.tm_min,
-                                            stTime.tm_sec,
-                                            (unsigned long)(stTimeVal.tv_usec / 1000),
-                                            pcFileName,
-                                            pcFuncName,
-                                            iFileLine);
+			stTime.tm_mon + 1, stTime.tm_mday, stTime.tm_hour, stTime.tm_min, stTime.tm_sec, 
+			(unsigned long)(stTimeVal.tv_usec / 1000), pcFileName, pcFuncName, iFileLine);
 
     fprintf(logfile, "%s", buf);
     vfprintf(logfile, format, vargs);
@@ -100,16 +95,13 @@ static void __LogCoverStrategy(char *pcPreLog) // 日志满后的覆盖策略
     pcPreLog[iLen - 1] = iNum % 10 + '0';
 }
 
-void WriteLog
-(
-    LOG_LEVEL_E enLogLevel,
-    const char *pcFileName,
-    const char *pcFuncName,
-    int         iFileLine,
-    const char *format, 
-    ...
-)
+void WriteLog(LOG_LEVEL_E enLogLevel, const char *pcFileName, const char *pcFuncName, int iFileLine, const char *format, ...)
 {
+	if (g_loglevel < enLogLevel)
+	{
+		return;
+	}
+	
     char szCommand[64]; // system函数中的指令
     struct stat statbuff;
     if (stat(gstLogFile[enLogLevel].szCurLog, &statbuff) >= 0) // 如果存在

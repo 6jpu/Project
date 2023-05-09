@@ -62,6 +62,8 @@ int main(int argc, char **argv)
 	int                   connfd;
 	int                   epollfd;
 	int                   msg_str_bytes;
+	int                   loglevel = LOG_LEVEL_DEBUG;   //可设置LOG_LEVEL_DEBUG,LOG_LEVEL_INFO,
+														//LOG_LEVEL_WARN,LOG_LEVEL_ERROR四个级别
 	int                   events;  //发生了的事件
 	int                   serv_port = 0;
 	int                   daemon_run = 0;
@@ -107,6 +109,9 @@ int main(int argc, char **argv)
 		print_usage(progname);
 		return -1;
 	}
+
+	/* 设置日志级别 */
+	logger_init(loglevel);
 
 	set_socket_rlimit();//解除Linux内核最大限制
 

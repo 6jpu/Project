@@ -39,6 +39,8 @@ int main(int argc,char **argv)
 {
     int                   ch;
 	int                   msg_str_bytes;
+	int                   loglevel = LOG_LEVEL_DEBUG;   //可设置LOG_LEVEL_DEBUG,LOG_LEVEL_INFO,
+														//LOG_LEVEL_WARN,LOG_LEVEL_ERROR四个级别
 	int                   sample_flag;       //sample_flag为0为未采样，为1则已采样
     int                   sockfd = -1;
     int                   rv = -1;
@@ -85,6 +87,9 @@ int main(int argc,char **argv)
                 return 0;
         }
     }
+
+	/* 设置日志级别 */
+	logger_init(loglevel);
 
     if ( (socket_init(&sock, hostname, port)) < 0)
     {
