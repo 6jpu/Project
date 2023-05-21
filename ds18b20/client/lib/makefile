@@ -1,3 +1,4 @@
+
 all:
 	    cd sqlite3 && ./build.sh
 			 
